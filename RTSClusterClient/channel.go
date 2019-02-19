@@ -31,6 +31,45 @@ func NewChannel() *VChannel {
 	return &VChannel{"", ChannelTypeUnknown, 0, list.New()}
 }
 
+func getServerLinks(serverid string) int {
+	var num int = 0
+	value, ok := mapServers.Load(serverid)
+	server := value.(*VServer)
+	if ok {
+		num += server.ChannelNum
+		for e := server.lstUsers.Front(); e != nil; e.Next() {
+			user := e.Value.(string)
+			value, ok := mapChannels.Load(user)
+			channel := value.(*VChannel)
+			if ok {
+				num += channel.Num
+			}
+		}
+		return num
+	}
+	return -1
+}
+
+func addUserChannel(serverid string, usrid string) {
+	value, ok := mapServers.Load(serverid)
+	if ok {
+		server := value.(*VServer)
+
+		var bExist bool = false
+		for e := server.lstUsers.Front(); e != nil; e.Next() {
+			user := e.Value.(string)
+			if user == userid {
+				bExist = true
+			}
+		}
+		if !bExist {
+			server.lstUsers.PushBack(usrid)
+			server.ChannelNum++
+			mapServers.Store(serverid, server)
+		}
+	}
+}
+
 func addChannel(usrid string) {
 	channel, ok := getChannel(usrid)
 	if !ok {
@@ -43,8 +82,9 @@ func addChannel(usrid string) {
 			server := v.(VServer)
 			key := k.(string)
 			if server.statenode.Status == zkhelper.NodeStatusWatched {
-				if minLinks == -1 || server.NumReqLinks < minLinks {
-					minLinks = server.NumReqLinks
+				links := getServerLinks(key)
+				if (minLinks == -1 || links < minLinks) && links != -1 {
+					minLinks = links
 					channelname = key
 					if minLinks == 0 {
 						goto finish
@@ -53,10 +93,9 @@ func addChannel(usrid string) {
 			}
 		finish:
 			if len(channelname) != 0 {
-				server.NumReqLinks++
 				log.Println("!!!!!!!", server)
-				server.lstUsers.PushBack(usrid)
-				mapServers.Store(channel, server)
+				addUserChannel(channelname, usrid)
+
 			}
 			return true
 		}
@@ -68,7 +107,6 @@ func addChannel(usrid string) {
 		log.Println(mapServers)
 	}
 	if channel != nil {
-		channel.Num++
 		mapChannels.Store(usrid, channel)
 	}
 	log.Println("########", channel)

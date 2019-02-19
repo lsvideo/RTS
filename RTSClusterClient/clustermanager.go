@@ -15,16 +15,16 @@ var mapServers sync.Map
 var mapChannels sync.Map
 
 type VServer struct {
-	Name        string     `json:"name"` // 名称
-	ServerType  ServerType `json:"type"`
-	IP          string     `json:"ip"`
-	Port        int        `json:"port"`
-	NumReqLinks int        `json:"numreqlinks"`
-	state       SysState
-	statenode   zkhelper.ZKNode
-	datanode    zkhelper.ZKNode
-	locknode    zkhelper.ZKNode
-	lstUsers    *list.List
+	Name       string     `json:"name"` // 名称
+	ServerType ServerType `json:"type"`
+	IP         string     `json:"ip"`
+	Port       int        `json:"port"`
+	ChannelNum int        `json:"channelnum"`
+	state      SysState
+	statenode  zkhelper.ZKNode
+	datanode   zkhelper.ZKNode
+	locknode   zkhelper.ZKNode
+	lstUsers   *list.List
 }
 
 func watchServer(client *zkhelper.ZKClient, server *VServer, status zkhelper.NodeStatus) {
