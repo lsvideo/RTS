@@ -43,11 +43,11 @@ func exitclean() int {
 
 func main() {
 
-	Parse_config("./sl.yaml", &config)
-	//Parse_config("./cm.yaml", &config)
+	//Parse_config("./sl.yaml", &config)
+	Parse_config("./cm.yaml", &config)
 
 	log.Infoln("get config:", config)
-	sl_log.SetLogLevel("debug")
+	sl_log.SetLogLevel("warning")
 
 	switch GetServerType(config.Type) {
 	case ServerTypeRTMP:

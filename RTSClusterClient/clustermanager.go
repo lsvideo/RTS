@@ -15,16 +15,16 @@ var mapServers sync.Map
 var mapChannels sync.Map
 
 type VServer struct {
-	Name       string     `json:"name"` // 名称
-	ServerType ServerType `json:"type"`
-	IP         string     `json:"ip"`
-	Port       int        `json:"port"`
-	ChannelNum int        `json:"channelnum"`
-	state      SysState
-	statenode  zkhelper.ZKNode
-	datanode   zkhelper.ZKNode
-	locknode   zkhelper.ZKNode
-	lstUsers   *list.List
+	Name        string     `json:"name"` // 名称
+	ServerType  ServerType `json:"type"`
+	IP          string     `json:"ip"`
+	Port        int        `json:"port"`
+	ChannelNum  int        `json:"channelnum"`
+	state       SysState
+	statenode   zkhelper.ZKNode
+	datanode    zkhelper.ZKNode
+	locknode    zkhelper.ZKNode
+	lstChannels *list.List
 }
 
 func watchServer(client *zkhelper.ZKClient, server *VServer, status zkhelper.NodeStatus) {
@@ -62,16 +62,8 @@ func watchAllServers(client *zkhelper.ZKClient) {
 		return true
 	}
 
-	/*	f1 := func(k, v interface{}) bool {
-		//这个函数的入参、出参的类型都已经固定，不能修改
-		//可以在函数体内编写自己的代码，调用map中的k,v
-		log.Println("f1!!!!!!!!!!!!!!", k, v)
-
-		return true
-	}*/
 	for {
 		mapServers.Range(watchoneserver)
-		//mapServers.Range(f1)
 		time.Sleep(time.Duration(2) * time.Second)
 	}
 }
@@ -125,7 +117,7 @@ func clustermanagerstart() {
 				server.statenode.Name = ip_port
 				server.statenode.Status = zkhelper.NodeStatusNew
 				server.statenode.Path = vnode.Path + "/" + path
-				server.lstUsers = list.New()
+				server.lstChannels = list.New()
 				mapServers.Store(ip_port, server)
 			} else {
 				server := value.(VServer)

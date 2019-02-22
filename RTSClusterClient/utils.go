@@ -162,3 +162,8 @@ func Between(str, starting, ending string) string {
 	}
 	return str[s : s+e]
 }
+
+func MapGoThrough(k, v interface{}) bool {
+	log.Warningln(k, ":", v)
+	return true
+}

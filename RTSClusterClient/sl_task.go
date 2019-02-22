@@ -10,8 +10,8 @@ import (
 )
 
 var (
-	MaxWorkerPoolSize int = 100 * CPUnumbers()
-	MaxJobQueueSize   int = 1000
+	MaxWorkerPoolSize int = CPUnumbers()
+	MaxJobQueueSize   int = CPUnumbers()
 )
 
 type Job interface {
@@ -58,32 +58,42 @@ type Task_response struct {
 
 func (task Task) Do() error {
 	log.Warningln("Do the job!!!!!!!!!!!!!!", task.User_id, task)
+	var resp Task_response
+	resp.User_id = task.User_id
+	resp.Task_command = task.Task_command
+
 	switch task.Task_command {
 	case "add_channel":
 		addChannel(task.User_id)
+		resp.Task_status = "ok"
+		resp.Task_response_info = "OK"
 		break
 	case "get_channel":
-		//是否已加入已有channel
-		getChannel(task.User_id)
-		//若未加入获取本次业务的channel
-		getChannel(task.Task_data)
-		//channel ++
+		channel, ok := getChannel(task.User_id, task.Task_data)
+		if ok {
+			resp.Task_status = "ok"
+			resp.Task_response_info = channel.Name
+		} else {
+			resp.Task_status = "error"
+			resp.Task_response_info = "get no channel"
+		}
 		break
-	case "delete_channel":
-		//channel --
-		delChannel(task.User_id, false)
+	case "leave_channel":
+		leaveChannel(task.User_id, task.Task_data)
+		resp.Task_status = "ok"
+		resp.Task_response_info = "OK"
+	case "del_channel":
+		delChannel(task.User_id)
+		resp.Task_status = "ok"
+		resp.Task_response_info = "ok"
 		break
 	default:
 		fmt.Printf("unknown cmd!!!\n")
 	}
-
+	log.Warningln("Do the response!!!!!!!!!!!!!!", task.User_id, task)
 	//生成应答json
 	//fmt.Println(task)
-	var resp Task_response
-	resp.User_id = task.User_id
-	resp.Task_command = task.Task_command
-	resp.Task_status = "ok"
-	resp.Task_response_info = "OK"
+
 	log.Println(resp)
 
 	task.finish <- resp
@@ -166,7 +176,7 @@ func vserver(w http.ResponseWriter, r *http.Request) {
 	}
 	task.finish = make(chan Task_response)
 	switch task.Task_command {
-	case "add_channel", "del_channel", "get_channel":
+	case "add_channel", "del_channel", "get_channel", "leave_channel":
 		AddTask(task)
 		resp := <-task.finish
 		ret, _ := json.Marshal(resp)
@@ -174,6 +184,7 @@ func vserver(w http.ResponseWriter, r *http.Request) {
 		break
 	default:
 		log.Printf("unknown cmd!!!\n")
+		fmt.Fprintln(w, "unknown cmd")
 	}
 
 }
