@@ -13,7 +13,23 @@ import (
 	"zkhelper"
 )
 
-func videoserverstart() {
+var (
+	REPORT_INTERVAL = 1
+)
+
+// RTMP服务
+type ServiceRTMP struct {
+}
+
+var rtmp ServiceRTMP
+
+func init() {
+	fmt.Println("init rtmp")
+	mapService[ServerTypeRTMP] = rtmp
+}
+
+func (rtmp ServiceRTMP) SLServiceStart() {
+	//func videoserverstart() {
 	defer Func_runningtime_trace()()
 	servers := config.ZK_servers
 	var rtsclient zkhelper.ZKClient
@@ -41,6 +57,8 @@ func videoserverstart() {
 		sum, _ := get_summaries()
 		if sum != nil {
 			sysstate.Links = sum.Date.System.Conn_srs
+		} else {
+			sysstate.Links = 0
 		}
 		wb -= wblast
 		rb -= rblast
@@ -69,4 +87,9 @@ func videoserverstart() {
 		}
 	}
 
+}
+
+func (rtmp ServiceRTMP) SLServiceStop() {
+	serverdone <- 1
+	<-serverdone
 }

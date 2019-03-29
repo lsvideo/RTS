@@ -14,10 +14,10 @@ type summaries struct {
 }
 
 type summary_info struct {
-	Status  bool         `json:"ok"` // 名称
+	Status  bool         `json:"ok"` //
 	Systime int64        `json:"now_ms"`
-	Program program_info `json:"self"`   // 该channel中一个用户被使用次数
-	System  system_info  `json:"system"` // 该channel中一个用户被使用次数
+	Program program_info `json:"self"`   //
+	System  system_info  `json:"system"` //
 }
 
 type program_info struct {

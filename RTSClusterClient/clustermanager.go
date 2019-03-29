@@ -27,6 +27,17 @@ type VServer struct {
 	lstChannels *list.List
 }
 
+// RTMP服务
+type ServiceClusterManager struct {
+}
+
+var cm ServiceClusterManager
+
+func init() {
+	log.Println("init clustermanager")
+	mapService[ServerTypeClusterManager] = cm
+}
+
 func watchServer(client *zkhelper.ZKClient, server *VServer, status zkhelper.NodeStatus) {
 	ch, err := client.WatchNode(&server.statenode, status)
 	Check_err(err)
@@ -68,7 +79,7 @@ func watchAllServers(client *zkhelper.ZKClient) {
 	}
 }
 
-func clustermanagerstart() {
+func (cm ServiceClusterManager) SLServiceStart() {
 	//defer Func_runningtime_trace()()
 	servers := config.ZK_servers
 	var rtsclient zkhelper.ZKClient
@@ -93,6 +104,8 @@ func clustermanagerstart() {
 		//lock test
 
 	*/
+	go taskmanager()
+
 	go watchAllServers(&rtsclient)
 
 	var autonode zkhelper.ZKNode //cluster manager服务 自动发现节点
@@ -129,5 +142,9 @@ func clustermanagerstart() {
 		rtsclient.WatchChild(&vnode)
 		time.Sleep(time.Duration(REPORT_INTERVAL) * time.Second)
 	}
+
+}
+
+func (cm ServiceClusterManager) SLServiceStop() {
 
 }

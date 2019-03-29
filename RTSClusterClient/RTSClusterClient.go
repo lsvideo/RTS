@@ -9,10 +9,6 @@ import (
 	//"time"
 )
 
-var (
-	REPORT_INTERVAL = 1
-)
-
 var config SL_config
 var APP_NAME = GetAppName()
 var log = sl_log.Log
@@ -31,13 +27,10 @@ func exitclean() int {
 		break
 	}
 
-	switch GetServerType(config.Type) {
-	case ServerTypeRTMP:
-		serverdone <- 1
-		<-serverdone
-		break
-	}
-	log.Infoln("!!!!!!!!!!!!!! exit")
+	st := GetServerType(config.Type)
+	service := mapService[st]
+	service.SLServiceStop()
+	log.Infoln("exit")
 	return 0
 }
 
@@ -47,18 +40,11 @@ func main() {
 	Parse_config("./cm.yaml", &config)
 
 	log.Infoln("get config:", config)
-	sl_log.SetLogLevel("warning")
+	sl_log.SetLogLevel("info")
 
-	switch GetServerType(config.Type) {
-	case ServerTypeRTMP:
-		go videoserverstart()
-	case ServerTypeClusterManager:
-		go clustermanagerstart()
-		go taskmanager()
-	default:
-		log.Errorf("%s:%s unknown service type!", APP_NAME, GetFuncName())
-		serverexit <- 1
-	}
+	st := GetServerType(config.Type)
+	service := mapService[st]
+	go service.SLServiceStart()
 
 	exitclean()
 
