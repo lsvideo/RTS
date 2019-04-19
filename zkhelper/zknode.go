@@ -142,3 +142,23 @@ func GetServiceType(st string) ServiceType {
 func NewNode(st string, nt NodeType) *NodeType {
 	return nil
 }
+
+func (node *ZKNode) SetName(name string) {
+	node.Name = name
+}
+
+func (node *ZKNode) SetNodeType(nt NodeType) {
+	node.NodeType = nt
+}
+
+func (node *ZKNode) SetNodeStatus(ns NodeStatus) {
+	node.Status = ns
+}
+
+func (node *ZKNode) SetServiceType(st ServiceType) {
+	node.ServiceType = st
+}
+
+func (node *ZKNode) SetPath(path string) {
+	node.Path = path
+}

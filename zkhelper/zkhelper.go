@@ -114,6 +114,20 @@ func (client *ZKClient) Register(node *ZKNode) error {
 	return nil
 }
 
+func (client *ZKClient) Create(node *ZKNode) error {
+	path := node.Path
+	data := []byte(node.Date)
+
+	path, err := client.conn.Create(path, data, 0, zk.WorldACL(zk.PermAll))
+	if err != nil {
+		return err
+	}
+
+	node.Path = path
+	fmt.Println(node)
+	return nil
+}
+
 func (client *ZKClient) PathExist(sPath string) (error, *zk.Stat) {
 	exists, s, err := client.conn.Exists(sPath)
 	if err != nil {
@@ -224,4 +238,16 @@ func (client *ZKClient) Set(node *ZKNode) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func (client *ZKClient) Delete(node *ZKNode) error {
+	path := node.Path
+	err, s := client.PathExist(path)
+
+	err = client.conn.Delete(path, s.Version)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
