@@ -7,10 +7,11 @@ import (
 )
 
 type VChannel struct {
-	Name        string      `json:"name"` // 名称
-	ChannelType ChannelType `json:"type"`
-	Num         int         `json:"num"` // 该用户channel被使用次数
-	lstUsers    *list.List  //用户列表
+	Name        string          `json:"name"` // 名称
+	ChannelType ChannelType     `json:"type"`
+	Num         int             `json:"num"` // 该用户channel被使用次数
+	lstUsers    *list.List      //用户列表
+	node        zkhelper.ZKNode //channel node
 }
 
 type ChannelType int32
@@ -28,7 +29,7 @@ var (
 )
 
 func NewChannel() *VChannel {
-	return &VChannel{"", ChannelTypeUnknown, 0, list.New()}
+	return &VChannel{"", ChannelTypeUnknown, 0, list.New(), zkhelper.ZKNode{}}
 }
 
 func getServerLinks(serverid string) int {
@@ -50,12 +51,12 @@ func getServerLinks(serverid string) int {
 	return -1
 }
 
-func addChanneltoServer(serverid string, userid string) {
+func addChanneltoServer(serverid string, userid string) bool {
+	var bExist bool = false
 	value, ok := mapServers.Load(serverid)
 	if ok {
 		server := value.(VServer)
 
-		var bExist bool = false
 		for e := server.lstChannels.Front(); e != nil; e = e.Next() {
 			user := e.Value.(string)
 			if user == userid {
@@ -66,16 +67,26 @@ func addChanneltoServer(serverid string, userid string) {
 			server.lstChannels.PushBack(userid)
 			server.ChannelNum++
 			mapServers.Store(serverid, server)
+
+			channel := NewChannel()
+			channel.Name = serverid
+			node := server.datanode
+			node.SetPath(node.Path + "/" + userid)
+			log.Println(node)
+			rtsclient.Create(&node)
+			channel.node = node
+			mapChannels.Store(userid, channel)
 		}
 	}
+	return bExist
 }
 
 func addChannel(usrid string) {
-	var channel *VChannel
-	value, ok := mapChannels.Load(usrid)
-	if ok {
-		channel = value.(*VChannel)
-	} else {
+	//var channel *VChannel
+	_, ok := mapChannels.Load(usrid)
+	if !ok {
+		//	channel = value.(*VChannel)
+		//} else {
 		var minLinks int = -1
 		var channelname string = ""
 
@@ -100,14 +111,7 @@ func addChannel(usrid string) {
 		}
 		mapServers.Range(getMinLinksServer)
 		if len(channelname) != 0 {
-			log.Println("get channel@@@@@@", channelname)
 			addChanneltoServer(channelname, usrid)
-			channel = NewChannel()
-			channel.Name = channelname
-		}
-		if channel != nil {
-			mapChannels.Store(usrid, channel)
-			log.Println("@@@@@Channels", mapChannels)
 		}
 	}
 
@@ -134,6 +138,9 @@ func getChannel(userid string, dstid string) (*VChannel, bool) {
 		if !UserInChannel(channel, userid) {
 			channel.Num++
 			channel.lstUsers.PushBack(userid)
+			node := channel.node
+			node.SetPath(node.Path + "/" + userid)
+			rtsclient.Create(&node)
 			mapChannels.Store(dstid, channel)
 		}
 		mapChannels.Range(MapGoThrough)
@@ -178,6 +185,9 @@ func delChannelfromServer(serverid string, channelid string) {
 				channel := e.Value.(string)
 				if channel == channelid {
 					server.lstChannels.Remove(e)
+					node := server.datanode
+					node.SetPath(node.Path + "/" + channelid)
+					rtsclient.Delete(&node)
 					break
 				}
 			}
@@ -193,6 +203,9 @@ func delUserfromChannel(channel *VChannel, userid string) {
 		next = e.Next()
 		if user == userid {
 			channel.lstUsers.Remove(e)
+			node := channel.node
+			node.SetPath(node.Path + "/" + userid)
+			rtsclient.Delete(&node)
 			break
 		} else if "all" == userid {
 			channel.lstUsers.Remove(e)
@@ -209,14 +222,14 @@ func delChannel(userid string) {
 		delUserfromChannel(channel, "all")
 		mapChannels.Delete(userid)
 	}
-	mapChannels.Range(MapGoThrough)
+	//mapChannels.Range(MapGoThrough)
 
 }
 
 func CleanServerChannels(serverid string) {
 	value, ok := mapServers.Load(serverid)
 	if ok {
-		server := value.(*VServer)
+		server := value.(VServer)
 		var next *list.Element
 		for e := server.lstChannels.Front(); e != nil; e = next {
 			user := e.Value.(string)

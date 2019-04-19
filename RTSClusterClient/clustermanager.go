@@ -44,7 +44,8 @@ func watchServer(client *zkhelper.ZKClient, server *VServer, status zkhelper.Nod
 	<-ch
 	switch server.statenode.Status {
 	case zkhelper.NodeStatusDelete:
-		server.statenode.Status = zkhelper.NodeStatusDelete
+		server.statenode.SetNodeStatus(zkhelper.NodeStatusDelete)
+		mapServers.Store(server.Name, *server)
 
 		break
 	}
@@ -57,32 +58,35 @@ func watchAllServers(client *zkhelper.ZKClient) {
 		server := v.(VServer)
 		key := k.(string)
 		if server.statenode.Status == zkhelper.NodeStatusNew {
-			log.Println(k, v)
+			//log.Println(k, v)
 			server.statenode.Status = zkhelper.NodeStatusWatched
 			mapServers.Store(key, server)
 			go watchServer(client, &server, zkhelper.NodeStatusDelete)
 		} else if server.statenode.Status == zkhelper.NodeStatusDelete {
-			log.Println(k, v)
+			//log.Println(k, v)
 			CleanServerChannels(server.Name)
+			log.Infoln("delete node", server.datanode)
+			rtsclient.Delete(&server.datanode)
 			mapServers.Delete(server.Name)
-			log.Infoln("delete node", server.Name)
-			log.Infoln(mapServers)
-			log.Infoln(mapServers.Load(server.Name))
-		}
+			//删除data节点
 
+			//log.Infoln(mapServers)
+			//log.Infoln(mapServers.Load(server.Name))
+		}
+		//log.Errorln("every:", server.statenode.Status)
+		//log.Errorf("Statenode: %p\n", &server.statenode)
 		return true
 	}
 
 	for {
 		mapServers.Range(watchoneserver)
-		time.Sleep(time.Duration(2) * time.Second)
+		time.Sleep(time.Duration(1) * time.Second)
 	}
 }
 
 func (cm ServiceClusterManager) SLServiceStart() {
 	//defer Func_runningtime_trace()()
 	servers := config.ZK_servers
-	var rtsclient zkhelper.ZKClient
 	_, err := rtsclient.NewClient(servers, config.Type, config.IP, config.Port, 3)
 	Check_err(err)
 
@@ -108,43 +112,64 @@ func (cm ServiceClusterManager) SLServiceStart() {
 
 	go watchAllServers(&rtsclient)
 
-	var autonode zkhelper.ZKNode //cluster manager服务 自动发现节点
-	autonode.ServiceType = zkhelper.GetServiceType(config.Type)
-	autonode.Path = zkhelper.GetNodePath(zkhelper.GetServicePath(autonode.ServiceType), zkhelper.NodeTypeAutoDetected)
-	autonode.Name = "[" + config.IP + ":" + strconv.Itoa(config.Port) + "]"
+	var autonode zkhelper.ZKNode //cluster manager服务 注册至自动发现节点
+	autonode.SetServiceType(zkhelper.GetServiceType(config.Type))
+	autonode.SetPath(zkhelper.GetNodePath(zkhelper.GetServicePath(autonode.ServiceType), zkhelper.NodeTypeAutoDetected))
+	autonode.SetName("[" + config.IP + ":" + strconv.Itoa(config.Port) + "]")
+	log.Println(autonode)
 	rtsclient.Register(&autonode)
 
-	var vnode zkhelper.ZKNode //视频服务自动发现节点
-	vnode.NodeType = zkhelper.NodeTypeAutoDetected
-	vnode.Path = zkhelper.GetNodePath(zkhelper.GetServicePath(zkhelper.ServiceTypeRTMP), zkhelper.NodeTypeAutoDetected)
+	var vnode zkhelper.ZKNode //监控rtmp服务自动发现节点
+	vnode.SetNodeType(zkhelper.NodeTypeAutoDetected)
+	vnode.SetPath(zkhelper.GetNodePath(zkhelper.GetServicePath(zkhelper.ServiceTypeRTMP), zkhelper.NodeTypeAutoDetected))
+	log.Println(vnode)
 	for {
 		children, err := rtsclient.GetChildren(&vnode)
 		Check_err(err)
 		for _, path := range children {
 			ip_port := Between(path, "[", "]")
-			if value, ok := mapServers.Load(ip_port); !ok {
+			//if value, ok := mapServers.Load(ip_port); !ok {
+			if _, ok := mapServers.Load(ip_port); !ok {
 				//不存在
 				log.Infoln("New node:", path)
 				var server VServer
-				server.Name = ip_port
-				server.statenode.Name = ip_port
-				server.statenode.Status = zkhelper.NodeStatusNew
-				server.statenode.Path = vnode.Path + "/" + path
+				server.SetName(ip_port)
+				server.SetServerType(ServerTypeRTMP)
+				server.NodeInit(path)
 				server.lstChannels = list.New()
 				mapServers.Store(ip_port, server)
-			} else {
-				server := value.(VServer)
-				log.Println(server)
+				//添加server zookeeper路径
+				rtsclient.Create(&server.datanode)
+				//			} else {
+				//				server := value.(VServer)
 			}
 
 		}
-		log.Infoln(mapServers)
 		rtsclient.WatchChild(&vnode)
-		time.Sleep(time.Duration(REPORT_INTERVAL) * time.Second)
 	}
 
 }
 
 func (cm ServiceClusterManager) SLServiceStop() {
 
+}
+
+func (server *VServer) NodeInit(autopath string) {
+	ip_port := Between(autopath, "[", "]")
+	server.statenode.Name = ip_port
+	server.statenode.Status = zkhelper.NodeStatusNew
+	server.statenode.Path = zkhelper.GetNodePath(zkhelper.GetServicePath(zkhelper.ServiceTypeRTMP), zkhelper.NodeTypeAutoDetected) + "/" + autopath
+
+	server.datanode.Name = ip_port
+	server.datanode.Status = zkhelper.NodeStatusNew
+	server.datanode.Path = zkhelper.GetNodePath(zkhelper.GetServicePath(zkhelper.ServiceTypeRTMP), zkhelper.NodeTypeServer) + "/" + ip_port
+	server.datanode.Date = []byte("1")
+}
+
+func (server *VServer) SetName(name string) {
+	server.Name = name
+}
+
+func (server *VServer) SetServerType(st ServerType) {
+	server.ServerType = st
 }
