@@ -8,6 +8,8 @@ import (
 	"strings"
 )
 
+var Conns uint32
+
 type summaries struct {
 	Code int          `json:"code"` // 名称
 	Date summary_info `json:"data"`
@@ -63,4 +65,72 @@ func get_summaries() (sum *summaries, err error) {
 		return nil, err
 	}
 	return sum, nil
+}
+
+func srs_connect(w http.ResponseWriter, r *http.Request) {
+	body, _ := ioutil.ReadAll(r.Body)
+	body_str := string(body)
+	log.Println("message: " + body_str)
+	log.Println("resp: " + r.RemoteAddr)
+
+	w.WriteHeader(200)
+	w.Write([]byte("0"))
+
+}
+
+func srs_close(w http.ResponseWriter, r *http.Request) {
+	body, _ := ioutil.ReadAll(r.Body)
+	body_str := string(body)
+	log.Println("message: " + body_str)
+	log.Println("resp: " + r.RemoteAddr)
+	w.WriteHeader(200)
+	w.Write([]byte("0"))
+}
+
+func srs_publish(w http.ResponseWriter, r *http.Request) {
+	body, _ := ioutil.ReadAll(r.Body)
+	body_str := string(body)
+	log.Println("message: " + body_str)
+	log.Println("resp: " + r.RemoteAddr)
+	w.WriteHeader(200)
+	w.Write([]byte("0"))
+}
+
+func srs_unpublish(w http.ResponseWriter, r *http.Request) {
+	body, _ := ioutil.ReadAll(r.Body)
+	body_str := string(body)
+	log.Println("message: " + body_str)
+	log.Println("resp: " + r.RemoteAddr)
+	w.WriteHeader(200)
+	w.Write([]byte("0"))
+}
+
+func srs_play(w http.ResponseWriter, r *http.Request) {
+	body, _ := ioutil.ReadAll(r.Body)
+	body_str := string(body)
+	log.Println("message: " + body_str)
+	log.Println("resp: " + r.RemoteAddr)
+	w.WriteHeader(200)
+	w.Write([]byte("0"))
+}
+
+func srs_stop(w http.ResponseWriter, r *http.Request) {
+	body, _ := ioutil.ReadAll(r.Body)
+	body_str := string(body)
+	log.Println("message: " + body_str)
+	log.Println("resp: " + r.RemoteAddr)
+	w.WriteHeader(200)
+	w.Write([]byte("0"))
+}
+
+func srsmanager() {
+	http.HandleFunc("/srs_connect", srs_connect)
+	http.HandleFunc("/srs_close", srs_close)
+	http.HandleFunc("/srs_publish", srs_publish)
+	http.HandleFunc("/srs_unpublish", srs_unpublish)
+	http.HandleFunc("/srs_play", srs_play)
+	http.HandleFunc("/srs_stop", srs_stop)
+	if err := http.ListenAndServe("127.0.0.1:10002", nil); err != nil {
+		log.Fatal("ListenAndServe: ", err)
+	}
 }

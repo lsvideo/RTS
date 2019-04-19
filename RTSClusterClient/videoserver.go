@@ -32,7 +32,6 @@ func (rtmp ServiceRTMP) SLServiceStart() {
 	//func videoserverstart() {
 	defer Func_runningtime_trace()()
 	servers := config.ZK_servers
-	var rtsclient zkhelper.ZKClient
 	_, err := rtsclient.NewClient(servers, config.Type, config.IP, config.Port, 1)
 	Check_err(err)
 
@@ -46,6 +45,8 @@ func (rtmp ServiceRTMP) SLServiceStart() {
 
 	//log.Infof("%s:%s devname:%s", APP_NAME, GetFuncName(), GetInterfaceNameFromIp(config.IP))
 
+	go srsmanager()
+
 	//bandwidth used
 	var sysstate SysState
 	var wblast, rblast uint64 = 0, 0
@@ -56,8 +57,12 @@ func (rtmp ServiceRTMP) SLServiceStart() {
 		wb, rb := BandwidthUsed(GetInterfaceNameFromIp(config.IP))
 		sum, _ := get_summaries()
 		if sum != nil {
+			if sysstate.Links == 0 {
+				log.Errorln("srs start!")
+			}
 			sysstate.Links = sum.Date.System.Conn_srs
 		} else {
+			log.Errorln("srs do not start!")
 			sysstate.Links = 0
 		}
 		wb -= wblast
