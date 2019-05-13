@@ -4,6 +4,8 @@ package main
 import (
 	"fmt"
 	//"math"
+	"crypto/md5"
+	"encoding/hex"
 	"net"
 	"os"
 	"runtime"
@@ -166,4 +168,11 @@ func Between(str, starting, ending string) string {
 func MapGoThrough(k, v interface{}) bool {
 	log.Warningln(k, ":", v)
 	return true
+}
+
+func GetStringMd5(s string) string {
+	md5 := md5.New()
+	md5.Write([]byte(s))
+	md5Str := hex.EncodeToString(md5.Sum(nil))
+	return md5Str
 }
