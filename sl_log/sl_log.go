@@ -2,7 +2,7 @@
 package sl_log
 
 import (
-	"fmt"
+	//	"fmt"
 	"os"
 
 	"github.com/sirupsen/logrus"
@@ -18,22 +18,15 @@ func init() {
 		customFormatter.FullTimestamp = true                        // 显示完整时间
 		customFormatter.TimestampFormat = "2006-01-02 15:04:05:001" // 时间格式
 		customFormatter.DisableTimestamp = false                    // 禁止显示时间
-		customFormatter.DisableColors = false                       // 禁止颜色显示
+		customFormatter.DisableColors = true                        // 禁止颜色显示
 
 		Log.SetFormatter(customFormatter)
 
 		//设置output,默认为stderr,可以为任何io.Writer，比如文件*os.File
-		Log.SetOutput(os.Stdout)
+		//Log.SetOutput(os.Stdout)
 		// You could set this to any `io.Writer` such as a file
-		//file, err := os.OpenFile("./logrus_test.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-		//if err == nil {
-		//	log.Info("Open /var/log/logrus_test.log")
-		//	log.Out = file
-		//} else {
-		//	log.Info("Failed to log to file, using default stderr")
-		//	panic(err)
-		//}
-		fmt.Println(os.Hostname())
+
+		//fmt.Println(os.Hostname())
 		//设置最低loglevel
 		Log.SetLevel(logrus.InfoLevel)
 	}
@@ -51,5 +44,16 @@ func SetLogLevel(level string) {
 	case "warning":
 		Log.SetLevel(logrus.WarnLevel)
 		break
+	}
+}
+
+func SetLogPath(path string) {
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err == nil {
+		Log.Out = file
+		Log.Info("Open log file ", path)
+	} else {
+		Log.Info("Failed to log to file, using default stderr")
+		panic(err)
 	}
 }
