@@ -1,0 +1,38 @@
+
+package conn.penetrate;
+option java_package = "com.shanlitech.conn.penetrate";   
+
+// 用于封装不同的需要发送到客户端的消息
+message UserMessage {
+	optional string	name	= 1;	// 消息全名
+	optional bytes	msg		= 2;	// protobuf序列化后的二进制消息内容
+}
+
+// 透传协议消息
+message Penetrate {
+	enum TargetType {				// 发送目的地类型
+		USER			= 0;		// 指定用户
+		GROUP			= 1;		// 指定群组
+		COMPANY			= 2;		// 指定单位
+		COMPANY_TREE	= 3;		// 指定集团,包括集团下子单位所有用户
+	}
+
+	optional TargetType tartype = 1;	// 目的地类型
+	optional uint32		targets = 2;	// 目的ID
+	repeated UserMessage msg	= 3;	// 消息,可以为多个
+}
+
+message ClientMessageIn {
+	optional uint32 uid		= 1;	// 发送消息的用户ID
+	optional string	name	= 2;	// 消息全名
+	optional bytes	msg		= 3;	// 消息内容
+}
+
+message ExternalServMsg {
+	optional string msg = 1;				//外部服务消息
+}
+
+message SendMMS {
+	optional string title   = 1;				//外部服务消息
+	optional string content = 2;				//外部服务消息
+}

@@ -1,0 +1,93 @@
+package video;
+
+message Item {
+	optional string key    = 1;
+	optional string value  = 2;
+}
+
+// 用于封装不同的需要发送到客户端的消息
+message RTCMessage {
+	optional string	rtcType  	= 1;	// 消息全名
+	repeated Item	rtcArrayData		= 2;	// json 消息
+}
+
+//终端获取本终端使用的视频通道时透传到RTS服务的消息
+//uid: 用户唯一标识uid
+message GetChannel {
+	optional string uid = 1;
+}
+
+//RTS服务接收到GetChannel消息后，透传回相应终端的消息
+//url: 用户获取的通道地址
+message GetChannelResp {
+	optional string url = 1;
+}
+
+// 用于封装Stream的消息
+message Stream {
+    optional string uid         = 1;    // 用户唯一标识uid
+	optional string	url	        = 2;	// IP:PORT
+	optional string tocken		= 3;	// tocken
+}
+
+// 用于封装Stream权限的消息
+message StreamAccess {
+    enum ActionType {				// 视频行为类型
+		PULLUP			= 0;		// 上拉
+		SENDBACK		= 1;	    // 回传
+		PUSH			= 2;		// 推流
+		PLAY	        = 3;		// 播放
+	}
+	 enum AccessControl {
+		USER			= 0;		// 指定用户
+		GROUP			= 1;		// 指定群组
+		COMPANY			= 2;		// 指定单位
+		COMPANY_TREE	= 3;		// 指定集团,包括集团下子单位所有用户
+	}
+
+
+	optional ActionType action = 1;	// 视频行为类型
+	optional AccessControl access = 2; //访问权限
+	optional string accessuid = 3;    //访问权限UID
+}
+
+//终端获取本终端使用的视频tocken时透传到RTS服务的消息
+//uid: 用户唯一标识uid
+message GetToken {
+	enum ActionType {				// 视频行为类型
+		PULLUP			= 0;		// 上拉
+		SENDBACK		= 1;	    // 回传
+		PUSH			= 2;		// 推流
+		PLAY	        = 3;		// 播放
+	}
+
+    optional string uid = 1;
+    optional string uname = 2;
+	optional string action  = 3;	// 视频行为类型
+    optional string touid = 4;        //目标uid
+	optional string companyid    = 5;    //公司id
+	optional string url  = 6;    //视频服务地址
+	
+}
+
+//RTS服务接收到GetTocken消息后，透传回相应终端的消息
+//tocken: tocken字符串
+message GetTockenResp {
+    optional string touid = 1;        //用户uid
+	optional string tocken  = 2;
+	optional string action  = 3;  
+}
+
+//调度台获取视频列表时透传到RTS服务的消息
+//uid: 调度台唯一标识uid
+message GetStreams {
+	optional uint32 uid = 1;
+	optional StreamAccess sa = 2;	  // 流权限
+}
+
+//RTS服务接收到GetStreams消息后，透传回相应终端的消息
+//tocken: tocken字符串
+message GetStreamsResp {
+    optional GetStreams info = 1;      // stream 信息
+	repeated Stream stream	= 2;	  // stream,可以为多个
+}
