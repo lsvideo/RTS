@@ -62,15 +62,15 @@ var (
 
 var (
 	SHANLI_SEPARATOR       = "/"
-	SHANLI_ZK_ROOT         = "shanli"
-	SHANLI_ZK_APP_RTMP     = "rtmp"
-	SHANLI_ZK_APP_CM       = "clustermanager"
+	SHANLI_ZK_ROOT         = "ShanLi"
+	SHANLI_ZK_APP_RTMP     = "RTMP"
+	SHANLI_ZK_APP_CM       = "RTSManager"
 	SHANLI_ZK_APP_DIRS     = []string{SHANLI_ZK_APP_RTMP, SHANLI_ZK_APP_CM}
-	SHANLI_ZK_FUNC_AUTO    = "autodetected"
-	SHANLI_ZK_FUNC_SERVERS = "servers"
-	SHANLI_ZK_FUNC_USERS   = "users"
+	SHANLI_ZK_FUNC_AUTO    = "Autodetected"
+	SHANLI_ZK_FUNC_SERVERS = "Servers"
+	SHANLI_ZK_FUNC_USERS   = "Users"
 	SHANLI_ZK_FUNC         = []string{SHANLI_ZK_FUNC_AUTO, SHANLI_ZK_FUNC_SERVERS, SHANLI_ZK_FUNC_USERS}
-	SHANLI_ZK_LOCK         = "lock"
+	SHANLI_ZK_LOCK         = "Lock"
 )
 
 //service node
