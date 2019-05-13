@@ -3,10 +3,10 @@ package main
 
 import (
 	//"net"
-	"encoding/json"
+	//"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"net/http"
+	//"io/ioutil"
+	//"net/http"
 )
 
 var (
@@ -67,6 +67,8 @@ func (task Task) Do() error {
 		addChannel(task.User_id)
 		resp.Task_status = "ok"
 		resp.Task_response_info = "OK"
+		log.Println(resp)
+		task.finish <- resp
 		break
 	case "get_channel":
 		channel, ok := getChannel(task.User_id, task.Task_data)
@@ -77,15 +79,33 @@ func (task Task) Do() error {
 			resp.Task_status = "error"
 			resp.Task_response_info = "get no channel"
 		}
+		log.Println(resp)
+		task.finish <- resp
 		break
 	case "leave_channel":
 		leaveChannel(task.User_id, task.Task_data)
 		resp.Task_status = "ok"
 		resp.Task_response_info = "OK"
-	case "del_channel":
+		log.Println(resp)
+		task.finish <- resp
+	case "delete_channel":
 		delChannel(task.User_id)
 		resp.Task_status = "ok"
 		resp.Task_response_info = "ok"
+		log.Println(resp)
+		task.finish <- resp
+		break
+	case "video.GetChannel":
+		RunCommand("video.GetChannel", task)
+		break
+	case "video.GetChannelResp":
+		RunCommand("video.GetChannelResp", task)
+		break
+	case "video.GetToken":
+		RunCommand("video.GetToken", task)
+		break
+	case "video.GetTokenResp":
+		RunCommand("video.GetTokenResp", task)
 		break
 	default:
 		fmt.Printf("unknown cmd!!!\n")
@@ -93,10 +113,6 @@ func (task Task) Do() error {
 	log.Warningln("Do the response!!!!!!!!!!!!!!", task.User_id, task)
 	//生成应答json
 	//fmt.Println(task)
-
-	log.Println(resp)
-
-	task.finish <- resp
 
 	return nil
 }
@@ -160,38 +176,4 @@ func init() {
 
 func AddTask(job Job) {
 	JobQueue <- job
-}
-
-func vserver(w http.ResponseWriter, r *http.Request) {
-	body, _ := ioutil.ReadAll(r.Body)
-	body_str := string(body)
-	log.Println("message: " + body_str)
-	log.Println("resp: " + r.RemoteAddr)
-	var task Task
-
-	if err := json.Unmarshal(body, &task); err == nil {
-		log.Println(task)
-	} else {
-		log.Println(err)
-	}
-	task.finish = make(chan Task_response)
-	switch task.Task_command {
-	case "add_channel", "del_channel", "get_channel", "leave_channel":
-		AddTask(task)
-		resp := <-task.finish
-		ret, _ := json.Marshal(resp)
-		fmt.Fprintln(w, string(ret))
-		break
-	default:
-		log.Printf("unknown cmd!!!\n")
-		fmt.Fprintln(w, "unknown cmd")
-	}
-
-}
-
-func taskmanager() {
-	http.HandleFunc("/vserver", vserver)
-	if err := http.ListenAndServe("127.0.0.1:10000", nil); err != nil {
-		log.Fatal("ListenAndServe: ", err)
-	}
 }

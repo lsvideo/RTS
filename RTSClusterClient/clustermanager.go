@@ -29,12 +29,25 @@ type VServer struct {
 
 // RTMP服务
 type ServiceClusterManager struct {
+	Protocals []SL_Protocal //对外接口协议
 }
 
 var cm ServiceClusterManager
 
 func init() {
 	log.Println("init clustermanager")
+	//初始化cmd
+	//cm.Commands = make(map[string]Task_Do, 10)
+	//cm.Command["add_channel"] =
+	//cm.Command["delete_channel"] =
+	//cm.Command["get_channel"] =
+	//cm.Command["leave_channel"] =
+
+	//初始化protocal
+	cm.Protocals = make([]SL_Protocal, 5)
+	cm.Protocals[0] = HttpProtocal
+	cm.Protocals[1] = EchatProtocal
+
 	mapService[ServerTypeClusterManager] = cm
 }
 
@@ -108,7 +121,13 @@ func (cm ServiceClusterManager) SLServiceStart() {
 		//lock test
 
 	*/
-	go taskmanager()
+	log.Printf("Protocals %v", cm.Protocals)
+	for k, v := range cm.Protocals {
+		log.Println("Protocal start ", k, ":", v)
+		if v != nil {
+			go v.SLProtocalStart()
+		}
+	}
 
 	go watchAllServers(&rtsclient)
 
