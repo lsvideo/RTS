@@ -6,6 +6,7 @@ import (
 
 	"sl_log"
 	//"strconv"
+
 	//"time"
 	"zkhelper"
 )
@@ -18,6 +19,15 @@ var signalChan = make(chan os.Signal, 1)
 var serverexit = make(chan int, 1)
 
 var rtsclient zkhelper.ZKClient
+
+func init() {
+	//Parse_config("./sl.yaml", &config)
+	sl_log.SetLogLevel("info")
+	sl_log.SetLogPath("./" + GetAppName() + ".log")
+	Parse_config("./cm.yaml", &config)
+	log.Infoln("get config:", config)
+
+}
 
 func exitclean() int {
 	signal.Notify(signalChan, os.Interrupt, os.Kill) //进程采集信号量。
@@ -38,12 +48,6 @@ func exitclean() int {
 }
 
 func main() {
-
-	Parse_config("./sl.yaml", &config)
-	//Parse_config("./cm.yaml", &config)
-
-	log.Infoln("get config:", config)
-	sl_log.SetLogLevel("info")
 
 	st := GetServerType(config.Type)
 	service := mapService[st]
