@@ -13,6 +13,8 @@ const (
 	NodeTypeLock         NodeType = 2
 	NodeTypeServer       NodeType = 3
 	NodeTypeUser         NodeType = 4
+	NodeTypeChannel      NodeType = 5
+	NodeTypeToken        NodeType = 6
 )
 
 var (
@@ -22,6 +24,8 @@ var (
 		NodeTypeLock:         "NodeTypeLock",
 		NodeTypeServer:       "NodeTypeServer",
 		NodeTypeUser:         "NodeTypeUser",
+		NodeTypeChannel:      "NodeTypeChannel",
+		NodeTypeToken:        "NodeTypeToken",
 	}
 )
 
@@ -50,6 +54,8 @@ const (
 	ServiceTypeUnknown        ServiceType = 0
 	ServiceTypeRTMP           ServiceType = 1
 	ServiceTypeClusterManager ServiceType = 2
+	ServiceTypeToken          ServiceType = 3
+	ServiceTypeChannel        ServiceType = 4
 )
 
 var (
@@ -62,15 +68,17 @@ var (
 
 var (
 	SHANLI_SEPARATOR       = "/"
-	SHANLI_ZK_ROOT         = "ShanLi"
-	SHANLI_ZK_APP_RTMP     = "RTMP"
-	SHANLI_ZK_APP_CM       = "RTSManager"
+	SHANLI_ZK_ROOT         = "shanli"
+	SHANLI_ZK_APP_RTMP     = "rtmp"
+	SHANLI_ZK_APP_CM       = "rtsmanager"
 	SHANLI_ZK_APP_DIRS     = []string{SHANLI_ZK_APP_RTMP, SHANLI_ZK_APP_CM}
-	SHANLI_ZK_FUNC_AUTO    = "Autodetected"
-	SHANLI_ZK_FUNC_SERVERS = "Servers"
-	SHANLI_ZK_FUNC_USERS   = "Users"
-	SHANLI_ZK_FUNC         = []string{SHANLI_ZK_FUNC_AUTO, SHANLI_ZK_FUNC_SERVERS, SHANLI_ZK_FUNC_USERS}
-	SHANLI_ZK_LOCK         = "Lock"
+	SHANLI_ZK_FUNC_AUTO    = "autodetected"
+	SHANLI_ZK_FUNC_SERVERS = "servers"
+	SHANLI_ZK_FUNC_USERS   = "users"
+	SHANLI_ZK_FUNC_CHANNEL = "channels"
+	SHANLI_ZK_FUNC_TOKEN   = "tokens"
+	SHANLI_ZK_FUNC         = []string{SHANLI_ZK_FUNC_AUTO, SHANLI_ZK_FUNC_SERVERS, SHANLI_ZK_FUNC_USERS, SHANLI_ZK_FUNC_CHANNEL, SHANLI_ZK_FUNC_TOKEN}
+	SHANLI_ZK_LOCK         = "lock"
 )
 
 //service node
@@ -86,7 +94,7 @@ type ZKNode struct {
 	NumChildren int      `json:"numchildren"`
 	Children    []ZKNode `json:"child"`
 	//stat        zk.Stat
-	Date []byte `json:"date"`
+	Data []byte `json:"date"`
 }
 
 func GeneratePath(paths ...string) (finalpath string) {
@@ -124,6 +132,10 @@ func GetNodePath(parent string, nt NodeType) (finalpath string) {
 		finalpath = GeneratePath(parent, SHANLI_ZK_FUNC_USERS)
 	case NodeTypeLock:
 		finalpath = GeneratePath(parent, SHANLI_ZK_LOCK)
+	case NodeTypeChannel:
+		finalpath = GeneratePath(parent, SHANLI_ZK_FUNC_CHANNEL)
+	case NodeTypeToken:
+		finalpath = GeneratePath(parent, SHANLI_ZK_FUNC_TOKEN)
 	}
 	return finalpath
 }
@@ -161,4 +173,8 @@ func (node *ZKNode) SetServiceType(st ServiceType) {
 
 func (node *ZKNode) SetPath(path string) {
 	node.Path = path
+}
+
+func (node *ZKNode) SetData(data []byte) {
+	node.Data = data
 }

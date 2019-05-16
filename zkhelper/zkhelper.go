@@ -103,7 +103,7 @@ func (client *ZKClient) Register(node *ZKNode) error {
 		return err
 	}
 	path := node.Path + "/" + node.Name
-	data := []byte(node.Date)
+	data := []byte(node.Data)
 
 	path, err := client.conn.CreateProtectedEphemeralSequential(path, data, zk.WorldACL(zk.PermAll))
 	node.Path = path
@@ -116,9 +116,23 @@ func (client *ZKClient) Register(node *ZKNode) error {
 
 func (client *ZKClient) Create(node *ZKNode) error {
 	path := node.Path
-	data := []byte(node.Date)
+	data := []byte(node.Data)
 
 	path, err := client.conn.Create(path, data, 0, zk.WorldACL(zk.PermAll))
+	if err != nil {
+		return err
+	}
+
+	node.Path = path
+	fmt.Println(node)
+	return nil
+}
+
+func (client *ZKClient) CreateSequence(node *ZKNode) error {
+	path := node.Path
+	data := []byte(node.Data)
+
+	path, err := client.conn.Create(path, data, zk.FlagSequence, zk.WorldACL(zk.PermAll))
 	if err != nil {
 		return err
 	}
@@ -232,11 +246,23 @@ func (client *ZKClient) Close() {
 	client.conn.Close()
 }
 
+func (client *ZKClient) Get(node *ZKNode) (string, error) {
+	err, _ := client.PathExist(node.Path)
+	if err != nil {
+		return "", err
+	}
+	buf, _, err := client.conn.Get(node.Path)
+	if err != nil {
+		return "", err
+	}
+	return string(buf), nil
+}
+
 func (client *ZKClient) Set(node *ZKNode) {
 	err, s := client.PathExist(node.Path)
-	_, err = client.conn.Set(node.Path, node.Date, s.Version)
+	_, err = client.conn.Set(node.Path, node.Data, s.Version)
 	if err != nil {
-		panic(err)
+		log.Errorln(err)
 	}
 }
 
@@ -250,4 +276,10 @@ func (client *ZKClient) Delete(node *ZKNode) error {
 	}
 
 	return nil
+}
+
+func (client *ZKClient) Exist(node *ZKNode) (bool, error) {
+	exists, _, err := client.conn.Exists(node.Path)
+
+	return exists, err
 }
