@@ -5,6 +5,7 @@ import (
 	//"fmt"
 	"container/list"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -18,7 +19,7 @@ type VServer struct {
 	Name        string     `json:"name"` // 名称
 	ServerType  ServerType `json:"type"`
 	IP          string     `json:"ip"`
-	Port        int        `json:"port"`
+	Port        string     `json:"port"`
 	ChannelNum  int        `json:"channelnum"`
 	state       SysState
 	statenode   zkhelper.ZKNode
@@ -154,6 +155,8 @@ func (cm ServiceClusterManager) SLServiceStart() {
 				var server VServer
 				server.SetName(ip_port)
 				server.SetServerType(ServerTypeRTMP)
+				server.SetIP(ip_port[:strings.Index(ip_port, ":")])
+				server.SetPort("1985")
 				server.NodeInit(path)
 				server.lstChannels = list.New()
 				mapServers.Store(ip_port, server)
@@ -182,7 +185,7 @@ func (server *VServer) NodeInit(autopath string) {
 	server.datanode.Name = ip_port
 	server.datanode.Status = zkhelper.NodeStatusNew
 	server.datanode.Path = zkhelper.GetNodePath(zkhelper.GetServicePath(zkhelper.ServiceTypeRTMP), zkhelper.NodeTypeServer) + "/" + ip_port
-	server.datanode.Date = []byte("1")
+	server.datanode.Data = []byte("1")
 }
 
 func (server *VServer) SetName(name string) {
@@ -191,4 +194,12 @@ func (server *VServer) SetName(name string) {
 
 func (server *VServer) SetServerType(st ServerType) {
 	server.ServerType = st
+}
+
+func (server *VServer) SetIP(ip string) {
+	server.IP = ip
+}
+
+func (server *VServer) SetPort(port string) {
+	server.Port = port
 }

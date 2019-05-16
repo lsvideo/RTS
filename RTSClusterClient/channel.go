@@ -239,3 +239,42 @@ func CleanServerChannels(serverid string) {
 		}
 	}
 }
+
+func getMinLinksCahnnel() (url string) {
+
+	var minLinks int = -1
+	var channelname string = ""
+
+	getMinLinksServer := func(k, v interface{}) bool {
+		//这个函数的入参、出参的类型都已经固定，不能修改
+		//可以在函数体内编写自己的代码，调用map中的k,v
+		server := v.(VServer)
+		key := k.(string)
+		log.Warningln("!!!!!!!!!!!!!key :", key, " value: ", server)
+		if server.statenode.Status == zkhelper.NodeStatusWatched {
+			var links int = 0
+			sum, _ := get_summaries(server.IP + ":" + server.Port)
+			log.Warningln("!!!!!!!!!!!!!sum :", sum)
+			if sum != nil {
+				links = sum.Date.System.Conn_srs
+			} else {
+				return true
+			}
+			if minLinks == -1 || links < minLinks {
+				minLinks = links
+				channelname = key
+				if minLinks == 1 {
+					goto finish
+				}
+			}
+		}
+		return true
+	finish:
+		return false
+	}
+	mapServers.Range(getMinLinksServer)
+	if len(channelname) != 0 {
+		url = channelname
+	}
+	return url
+}
