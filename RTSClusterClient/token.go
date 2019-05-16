@@ -3,6 +3,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"zkhelper"
 )
 
@@ -39,5 +40,8 @@ func (t *Token) GetToken(uid string) bool {
 
 func (t *Token) Verify(vt string, ip string) error {
 
-	return nil
+	if t.Token == vt && t.IP == ip {
+		return nil
+	}
+	return errors.New("Token error.")
 }
