@@ -296,11 +296,7 @@ func srs_unpublish(w http.ResponseWriter, r *http.Request) {
 		task.Task_data = string(buf)
 		AddTask(task)
 
-		var echatchannel eChatChannel
-		echatchannel.Uid = m.Get("uid")
 		task.Task_command = "eChatDeleteChannel"
-		buf, _ = json.Marshal(echatchannel)
-		task.Task_data = string(buf)
 		AddTask(task)
 	}
 
@@ -368,7 +364,7 @@ func srs_play(w http.ResponseWriter, r *http.Request) {
 
 			//var echatchannel eChatChannel
 			//echatchannel.Uid = srsData.Stream
-			task.User_id = srsData.Stream
+			//task.User_id = srsData.Stream
 			task.Task_command = "eChatAddUserToChannel"
 			//buf, _ = json.Marshal(echatchannel)
 			//task.Task_data = string(buf)
@@ -410,7 +406,7 @@ func srs_stop(w http.ResponseWriter, r *http.Request) {
 		log.Errorln("Parse rtmp URL err:", err)
 	} else {
 		//用户存在为前提
-		_, ok := mapeChatUser.Load(m.Get("uid"))
+		_, ok := mapeChatUser.Load(m.Get("uid") + "-" + m.Get("opt") + "-" + srsData.Stream)
 		if ok {
 			log.Infoln(m)
 			log.Infoln("uid:", m.Get("uid"))
@@ -436,12 +432,7 @@ func srs_stop(w http.ResponseWriter, r *http.Request) {
 			task.Task_data = string(buf)
 			AddTask(task)
 
-			var echatchannel eChatChannel
-			echatchannel.Uid = srsData.Stream
-			task.User_id = m.Get("uid")
 			task.Task_command = "eChatDeleteUserFromChannel"
-			buf, _ = json.Marshal(echatchannel)
-			task.Task_data = string(buf)
 			AddTask(task)
 		} else {
 			res = false

@@ -75,9 +75,18 @@ func (u *srs_eChatUser) store() error {
 	}
 	typenode.Data = buf
 	//err = rtsclient.CreateSequence(&typenode)
-	err = rtsclient.Create(&typenode)
+
+	exists, err = rtsclient.Exist(&typenode)
 	if err != nil {
 		return err
+	}
+	if !exists {
+		err := rtsclient.Create(&typenode)
+		if err != nil {
+			return err
+		}
+	} else {
+		rtsclient.Set(&typenode)
 	}
 
 	u.User.usernode = &typenode

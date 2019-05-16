@@ -10,11 +10,16 @@ import (
 )
 
 var mapeChatChannels sync.Map
+var eChatChannelNode zkhelper.ZKNode
 
 type eChatChannel struct {
 	Uid         string     `json:"uid"` //Channelid
 	lstUsers    *list.List //用户列表
 	channelnode *zkhelper.ZKNode
+}
+
+func (u *eChatChannel) getUidMark(user string, opt string) string {
+	return user + "-" + opt + "-" + u.Uid
 }
 
 func init() {
@@ -25,22 +30,108 @@ func init() {
 }
 
 func eChatCannelInit() {
+	eChatChannelNodeInit()
+	eChatDataInit()
+	eChatDataCheck()
+}
+
+func eChatChannelNodeInit() {
 	//EchatChannel 节点初始化  ../channels/IP:PORT
-	var channelnode zkhelper.ZKNode
-	channelnode.ServiceType = zkhelper.GetServiceType(config.Type)
-	channelnode.Name = config.IP + ":" + strconv.Itoa(config.Port)
-	channelnode.Path = zkhelper.GetNodePath(zkhelper.GetServicePath(channelnode.ServiceType), zkhelper.NodeTypeChannel) + "/" + channelnode.Name
-	exists, err := rtsclient.Exist(&channelnode)
+	eChatChannelNode.ServiceType = zkhelper.GetServiceType(config.Type)
+	eChatChannelNode.Name = config.IP + ":" + strconv.Itoa(config.Port)
+	eChatChannelNode.Path = zkhelper.GetNodePath(zkhelper.GetServicePath(eChatChannelNode.ServiceType), zkhelper.NodeTypeChannel) + "/" + eChatChannelNode.Name
+	exists, err := rtsclient.Exist(&eChatChannelNode)
 	if err != nil {
 		log.Errorln(err)
 	}
 	if !exists {
-		err := rtsclient.Create(&channelnode)
+		err := rtsclient.Create(&eChatChannelNode)
 		if err != nil {
 			log.Errorln(err)
 		}
 	}
+}
 
+func getSrsUsers(node *zkhelper.ZKNode) {
+	children, err := rtsclient.GetChildren(node)
+	if err != nil {
+		log.Errorln(err)
+	}
+	log.Infoln("node:", node.Path)
+	if len(children) != 0 {
+		for _, name := range children {
+			log.Infoln("child:", name)
+			var childnode zkhelper.ZKNode = *node
+			childnode.SetPath(node.Path + "/" + name)
+			str, err := rtsclient.Get(&childnode)
+			if err != nil {
+				log.Infoln("Get node err:", err)
+			} else {
+				log.Infoln("Get node :", str)
+				var task Task
+				task.Task_data = str
+				EchatAddUser(task)
+				if node.Path == eChatChannelNode.Path {
+					EchatAddChannel(task)
+				} else {
+					EchatAddUserToChannel(task)
+				}
+			}
+			getSrsUsers(&childnode)
+		}
+	}
+}
+
+func eChatDataInit() {
+	//read data under eChatChannelNode
+	getSrsUsers(&eChatChannelNode)
+	log.Infoln("All Channel :")
+	mapeChatChannels.Range(MapGoThrough)
+	log.Infoln("All User :")
+	mapeChatUser.Range(MapGoThrough)
+
+}
+
+func mapeChatChannelCheck(k, v interface{}) bool {
+	uid := k.(string)
+	channel := v.(*eChatChannel)
+	log.Infoln("channel :", uid, " - ", *channel)
+	value, _ := mapeChatUser.Load(channel.getUidMark(uid, "1"))
+	srsuser := value.(*srs_eChatUser)
+	client_info, err := get_client_info("127.0.0.1:1985", strconv.Itoa(srsuser.Client_id))
+	if client_info == nil || client_info.Code != 0 || err != nil {
+		log.Errorln("client_info :", client_info, " - ", err)
+		var task Task
+		buf, _ := json.Marshal(srsuser)
+		task.Task_data = string(buf)
+		EchatDeleteUser(task)
+		EchatDeleteChannel(task)
+	} else {
+		log.Errorln("client_info :", client_info, " - ", err)
+		var next *list.Element
+		for e := channel.lstUsers.Front(); e != nil; e = next {
+			useruid := e.Value.(string)
+			value, _ := mapeChatUser.Load(channel.getUidMark(useruid, "2"))
+			channeluser := value.(*srs_eChatUser)
+			user_client_info, err := get_client_info("127.0.0.1:1985", strconv.Itoa(channeluser.Client_id))
+			log.Errorln("user_client_info :", user_client_info, " - ", err)
+			log.Errorln("channeluser :", channeluser)
+			if user_client_info == nil || user_client_info.Code != 0 || err != nil {
+				log.Errorln("44444444user_client_info :", user_client_info, " - ", err)
+				var task Task
+				buf, _ := json.Marshal(channeluser)
+				task.Task_data = string(buf)
+				EchatDeleteUser(task)
+				EchatDeleteUserFromChannel(task)
+			}
+		}
+	}
+	return true
+}
+
+func eChatDataCheck() {
+	//Check data under eChatChannelNode
+	mapeChatChannels.Range(mapeChatChannelCheck)
 }
 
 func (c *eChatChannel) store(srsuser srs_eChatUser) error {
@@ -88,7 +179,7 @@ func EchatAddChannel(t Task) {
 
 func deleChatChannel(c *eChatChannel) error {
 	var channel *eChatChannel
-	mapeChatChannels.Range(MapGoThrough)
+	//	mapeChatChannels.Range(MapGoThrough)
 	value, ok := mapeChatChannels.Load(c.Uid)
 	if ok {
 		channel = value.(*eChatChannel)
@@ -107,8 +198,10 @@ func deleChatChannel(c *eChatChannel) error {
 
 func EchatDeleteChannel(t Task) {
 	var channel eChatChannel
-	json.Unmarshal([]byte(t.Task_data), &channel)
-	log.Infoln("@@@@@@@@@@@@@@@@@@@@@@@@EchatDeleteChannel:", channel)
+	var srsuser srs_eChatUser
+	json.Unmarshal([]byte(t.Task_data), &srsuser)
+	log.Infoln("@@@@@@@@@@@@@@@@@@@@@@@@EchatDeleteChannel:", srsuser)
+	channel.Uid = srsuser.User.Uid
 	err := deleChatChannel(&channel)
 	if err != nil {
 		log.Errorln("@@@@@@@@@@@@@@@@@@@@@@EchatDeleteChannel :", channel, " err:", err)
@@ -134,7 +227,7 @@ func EchatAddUserToChannel(t Task) {
 	var echatuser *eChatUser
 	json.Unmarshal([]byte(t.Task_data), &srsuser)
 	log.Infoln("@@@@EchatAddUserToChannel:", srsuser, "to", t.User_id)
-	channel.Uid = t.User_id
+	channel.Uid = srsuser.Stream
 	echatuser = srsuser.User
 	value, ok := mapeChatChannels.Load(channel.Uid)
 	if ok {
@@ -183,10 +276,12 @@ func delUserfromeChatChannel(channel *eChatChannel, uid string) {
 
 func EchatDeleteUserFromChannel(t Task) {
 	var channel eChatChannel
-	json.Unmarshal([]byte(t.Task_data), &channel)
-	log.Infoln("@@@@EchatDeleteUserFromChannel:", channel)
+	var srsuser srs_eChatUser
+	json.Unmarshal([]byte(t.Task_data), &srsuser)
+	log.Infoln("@@@@EchatDeleteUserFromChannel:", srsuser)
+	channel.Uid = srsuser.Stream
 	value, ok := mapeChatChannels.Load(channel.Uid)
-	uid := t.User_id
+	uid := srsuser.User.Uid
 	if ok {
 		echatchannel := value.(*eChatChannel)
 		delUserfromeChatChannel(echatchannel, uid)
