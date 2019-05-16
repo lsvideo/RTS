@@ -8,10 +8,13 @@ import (
 )
 
 type SL_config struct {
-	IP         string
-	Port       int
-	Type       string
-	ZK_servers []string
+	IP               string
+	Port             int
+	Type             string
+	Dev              string
+	ZK_servers       []string
+	Penetrate_server string
+	Video_server     string
 }
 
 type ServerType int32
@@ -50,7 +53,10 @@ func Parse_config(cfgfile string, sl_cfg *SL_config) error {
 	sl_cfg.IP = conf["ip"].(string)
 	sl_cfg.Port = int(conf["port"].(int64))
 	sl_cfg.Type = conf["type"].(string)
+	sl_cfg.Dev = conf["device"].(string)
 	servers := conf["zk_servers"]
+	sl_cfg.Penetrate_server = conf["penetrate_server"].(string)
+	sl_cfg.Video_server = conf["video_server"].(string)
 
 	switch v := servers.(type) {
 	case []interface{}:
