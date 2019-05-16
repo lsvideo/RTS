@@ -19,20 +19,26 @@ type eChatUser struct {
 	usernode *zkhelper.ZKNode
 }
 
+type srs_eChatUser struct {
+	Client_id int        `json:"client_id"`
+	Stream    string     `json:"stream"`
+	User      *eChatUser `json:"echat_user"`
+}
+
 func init() {
 	RegisterCommand("eChatAddUser", EchatAddUser)
 	RegisterCommand("eChatDeleteUser", EchatDeleteUser)
 }
 
-func (u *eChatUser) getUidMark() string {
-	return u.Uid + "=" + u.Option
+func (u *eChatUser) getUidMark(mark string) string {
+	return u.Uid + "-" + u.Option + "-" + mark
 }
 
-func (u *eChatUser) store() error {
+func (u *srs_eChatUser) store() error {
 	var companynode zkhelper.ZKNode //cluster manager服务 注册至自动发现节点
 	companynode.SetServiceType(zkhelper.ServiceTypeRTMP)
-	companynode.SetPath(zkhelper.GetNodePath(zkhelper.GetServicePath(companynode.ServiceType), zkhelper.NodeTypeUser) + "/" + u.Cid)
-	companynode.SetName(u.Cid)
+	companynode.SetPath(zkhelper.GetNodePath(zkhelper.GetServicePath(companynode.ServiceType), zkhelper.NodeTypeUser) + "/" + u.User.Cid)
+	companynode.SetName(u.User.Cid)
 	exists, err := rtsclient.Exist(&companynode)
 	if err != nil {
 		return err
@@ -46,8 +52,8 @@ func (u *eChatUser) store() error {
 
 	var usernode zkhelper.ZKNode //cluster manager服务 注册至自动发现节点
 	usernode = companynode
-	usernode.SetPath(usernode.Path + "/" + u.Uid)
-	usernode.SetName(u.Uid)
+	usernode.SetPath(usernode.Path + "/" + u.User.Uid)
+	usernode.SetName(u.User.Uid)
 	exists, err = rtsclient.Exist(&usernode)
 	if err != nil {
 		return err
@@ -61,48 +67,47 @@ func (u *eChatUser) store() error {
 
 	var typenode zkhelper.ZKNode //cluster manager服务 注册至自动发现节点
 	typenode = usernode
-	typenode.SetPath(typenode.Path + "/" + u.Action + "_")
-	typenode.SetName(u.Action)
-	buf, err := json.Marshal(u)
+	typenode.SetPath(typenode.Path + "/" + u.User.Action + "_" + u.Stream)
+	typenode.SetName(u.User.Action)
+	buf, err := json.Marshal(u.User)
 	if err != nil {
 		return err
 	}
 	typenode.Data = buf
-	err = rtsclient.CreateSequence(&typenode)
+	//err = rtsclient.CreateSequence(&typenode)
+	err = rtsclient.Create(&typenode)
 	if err != nil {
 		return err
 	}
 
-	u.usernode = &typenode
-	mapeChatUser.Store(u.getUidMark(), u)
+	u.User.usernode = &typenode
+	mapeChatUser.Store(u.User.getUidMark(u.Stream), u)
 
 	return nil
 }
 
 func EchatAddUser(t Task) {
-	var echatuser eChatUser
-	json.Unmarshal([]byte(t.Task_data), &echatuser)
-	log.Infoln("@@@@EchatAddUser:", echatuser)
-	err := echatuser.store()
+	var srsuser srs_eChatUser
+	json.Unmarshal([]byte(t.Task_data), &srsuser)
+	log.Infoln("@@@@EchatAddUser:", srsuser)
+	err := srsuser.store()
 	if err != nil {
-		log.Errorln("@@@@EchatAddUser :", echatuser, " err:", err)
+		log.Errorln("@@@@EchatAddUser :", srsuser, " err:", err)
 	}
 
 }
 
-func deluser(u *eChatUser) error {
-	var user *eChatUser
+func delsrsuser(u *srs_eChatUser) error {
+	var user *srs_eChatUser
 	mapeChatUser.Range(MapGoThrough)
-	value, ok := mapeChatUser.Load(u.getUidMark())
+	value, ok := mapeChatUser.Load(u.User.getUidMark(u.Stream))
 	if ok {
-		user = value.(*eChatUser)
-		log.Errorln("!11111", user)
-		err := rtsclient.Delete(user.usernode)
+		user = value.(*srs_eChatUser)
+		err := rtsclient.Delete(user.User.usernode)
 		if err != nil {
 			return err
 		}
-		log.Errorln("!22222", user)
-		mapeChatUser.Delete(u.getUidMark())
+		mapeChatUser.Delete(user.User.getUidMark(u.Stream))
 	} else {
 		log.Errorln("!!!!!!!!!!!!!!")
 	}
@@ -111,12 +116,12 @@ func deluser(u *eChatUser) error {
 }
 
 func EchatDeleteUser(t Task) {
-	var echatuser eChatUser
-	json.Unmarshal([]byte(t.Task_data), &echatuser)
-	log.Infoln("@@@@eChatUser:", echatuser)
-	err := deluser(&echatuser)
+	var srsuser srs_eChatUser
+	json.Unmarshal([]byte(t.Task_data), &srsuser)
+	log.Infoln("eChatUser:", srsuser)
+	err := delsrsuser(&srsuser)
 	if err != nil {
-		log.Errorln("@@@@EchatAddUser :", echatuser, " err:", err)
+		log.Errorln("EchatDeleteUser :", srsuser, " err:", err)
 	}
 
 }

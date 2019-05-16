@@ -159,7 +159,8 @@ func srs_connect(w http.ResponseWriter, r *http.Request) {
 		strip := srsData.IP
 
 		//token 验证
-		token.GetToken(uid)
+		//token.GetToken(uid)
+		token.GetToken("1001")
 		err := token.Verify(strtoken, strip)
 		if err != nil {
 			log.Errorln("Token verify uid:", uid, "ip: ", strip, " err:", err)
@@ -220,10 +221,15 @@ func srs_publish(w http.ResponseWriter, r *http.Request) {
 		echatuser.Url = u.Host
 		echatuser.Action = m.Get("type")
 		echatuser.Option = m.Get("opt")
-		//AddTask()
+
+		var srsuser srs_eChatUser
+		srsuser.Client_id = srsData.Client_id
+		srsuser.Stream = srsData.Stream
+		srsuser.User = &echatuser
+
 		var task Task
 		task.Task_command = "eChatAddUser"
-		buf, _ := json.Marshal(echatuser)
+		buf, _ := json.Marshal(srsuser)
 		task.Task_data = string(buf)
 		AddTask(task)
 
@@ -278,10 +284,15 @@ func srs_unpublish(w http.ResponseWriter, r *http.Request) {
 		echatuser.Url = u.Host
 		echatuser.Action = m.Get("type")
 		echatuser.Option = m.Get("opt")
-		//AddTask()
+
+		var srsuser srs_eChatUser
+		srsuser.Client_id = srsData.Client_id
+		srsuser.Stream = srsData.Stream
+		srsuser.User = &echatuser
+
 		var task Task
 		task.Task_command = "eChatDeleteUser"
-		buf, _ := json.Marshal(echatuser)
+		buf, _ := json.Marshal(srsuser)
 		task.Task_data = string(buf)
 		AddTask(task)
 
@@ -324,33 +335,47 @@ func srs_play(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Errorln("Parse rtmp URL err:", err)
 	} else {
-		log.Infoln(m)
-		log.Infoln("uid:", m.Get("uid"))
-		log.Infoln("cid:", m.Get("cid"))
-		log.Infoln("type:", m.Get("type"))
-		log.Infoln("opt:", m.Get("opt"))
+		//channel户存在为前提
+		_, ok := mapeChatChannels.Load(srsData.Stream)
+		if ok {
+			log.Infoln(m)
+			log.Infoln("uid:", m.Get("uid"))
+			log.Infoln("cid:", m.Get("cid"))
+			log.Infoln("type:", m.Get("type"))
+			log.Infoln("opt:", m.Get("opt"))
 
-		var echatuser eChatUser
-		echatuser.Uid = m.Get("uid")
-		echatuser.Cid = m.Get("cid")
-		echatuser.Url = config.IP + ":" + strconv.Itoa(config.Port) //SRSManger和SRS一一对应 config中的IP:PORT 即为SRS地址
-		echatuser.Action = m.Get("type")
-		echatuser.Option = m.Get("opt")
-		//AddTask()
-		var task Task
-		//拉流不记录
-		task.Task_command = "eChatAddUser"
-		buf, _ := json.Marshal(echatuser)
-		task.Task_data = string(buf)
-		AddTask(task)
+			var echatuser eChatUser
+			echatuser.Uid = m.Get("uid")
+			echatuser.Cid = m.Get("cid")
+			echatuser.Url = config.IP + ":" + strconv.Itoa(config.Port) //SRSManger和SRS一一对应 config中的IP:PORT 即为SRS地址
+			echatuser.Action = m.Get("type")
+			echatuser.Option = m.Get("opt")
+			//AddTask()
 
-		//var echatchannel eChatChannel
-		//echatchannel.Uid = srsData.Stream
-		task.User_id = srsData.Stream
-		task.Task_command = "eChatAddUserToChannel"
-		//buf, _ = json.Marshal(echatchannel)
-		//task.Task_data = string(buf)
-		AddTask(task)
+			//流已推送
+
+			var srsuser srs_eChatUser
+			srsuser.Client_id = srsData.Client_id
+			srsuser.Stream = srsData.Stream
+			srsuser.User = &echatuser
+
+			var task Task
+			//拉流不记录
+			task.Task_command = "eChatAddUser"
+			buf, _ := json.Marshal(srsuser)
+			task.Task_data = string(buf)
+			AddTask(task)
+
+			//var echatchannel eChatChannel
+			//echatchannel.Uid = srsData.Stream
+			task.User_id = srsData.Stream
+			task.Task_command = "eChatAddUserToChannel"
+			//buf, _ = json.Marshal(echatchannel)
+			//task.Task_data = string(buf)
+			AddTask(task)
+		} else {
+			res = false
+		}
 	}
 
 	res = true
@@ -384,32 +409,43 @@ func srs_stop(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Errorln("Parse rtmp URL err:", err)
 	} else {
-		log.Infoln(m)
-		log.Infoln("uid:", m.Get("uid"))
-		log.Infoln("cid:", m.Get("cid"))
-		log.Infoln("type:", m.Get("type"))
-		log.Infoln("opt:", m.Get("opt"))
+		//用户存在为前提
+		_, ok := mapeChatUser.Load(m.Get("uid"))
+		if ok {
+			log.Infoln(m)
+			log.Infoln("uid:", m.Get("uid"))
+			log.Infoln("cid:", m.Get("cid"))
+			log.Infoln("type:", m.Get("type"))
+			log.Infoln("opt:", m.Get("opt"))
 
-		var echatuser eChatUser
-		echatuser.Uid = m.Get("uid")
-		echatuser.Cid = m.Get("cid")
-		echatuser.Url = u.Host
-		echatuser.Action = m.Get("type")
-		echatuser.Option = m.Get("opt")
-		//AddTask()
-		var task Task
-		task.Task_command = "eChatDeleteUser"
-		buf, _ := json.Marshal(echatuser)
-		task.Task_data = string(buf)
-		AddTask(task)
+			var echatuser eChatUser
+			echatuser.Uid = m.Get("uid")
+			echatuser.Cid = m.Get("cid")
+			echatuser.Url = u.Host
+			echatuser.Action = m.Get("type")
+			echatuser.Option = m.Get("opt")
 
-		var echatchannel eChatChannel
-		echatchannel.Uid = srsData.Stream
-		task.User_id = m.Get("uid")
-		task.Task_command = "eChatDeleteUserFromChannel"
-		buf, _ = json.Marshal(echatchannel)
-		task.Task_data = string(buf)
-		AddTask(task)
+			var srsuser srs_eChatUser
+			srsuser.Client_id = srsData.Client_id
+			srsuser.Stream = srsData.Stream
+			srsuser.User = &echatuser
+
+			var task Task
+			task.Task_command = "eChatDeleteUser"
+			buf, _ := json.Marshal(srsuser)
+			task.Task_data = string(buf)
+			AddTask(task)
+
+			var echatchannel eChatChannel
+			echatchannel.Uid = srsData.Stream
+			task.User_id = m.Get("uid")
+			task.Task_command = "eChatDeleteUserFromChannel"
+			buf, _ = json.Marshal(echatchannel)
+			task.Task_data = string(buf)
+			AddTask(task)
+		} else {
+			res = false
+		}
 	}
 
 	res = true

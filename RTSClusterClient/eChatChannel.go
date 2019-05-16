@@ -43,15 +43,15 @@ func eChatCannelInit() {
 
 }
 
-func (c *eChatChannel) store(echatuser eChatUser) error {
-	c.Uid = echatuser.Uid
+func (c *eChatChannel) store(srsuser srs_eChatUser) error {
+	c.Uid = srsuser.User.Uid
 	_, ok := mapeChatChannels.Load(c.Uid)
 	if !ok {
 		var channelnode zkhelper.ZKNode
 		channelnode.SetServiceType(zkhelper.ServiceTypeRTMP)
-		channelnode.SetPath(zkhelper.GetNodePath(zkhelper.GetServicePath(channelnode.ServiceType), zkhelper.NodeTypeChannel) + "/" + echatuser.Url + "/" + c.Uid)
+		channelnode.SetPath(zkhelper.GetNodePath(zkhelper.GetServicePath(channelnode.ServiceType), zkhelper.NodeTypeChannel) + "/" + srsuser.User.Url + "/" + c.Uid)
 		channelnode.SetName(c.Uid)
-		buf, _ := json.Marshal(echatuser)
+		buf, _ := json.Marshal(srsuser)
 		channelnode.SetData(buf)
 		exists, err := rtsclient.Exist(&channelnode)
 		if err != nil {
@@ -72,11 +72,11 @@ func (c *eChatChannel) store(echatuser eChatUser) error {
 
 func EchatAddChannel(t Task) {
 	var echatchannel eChatChannel
-	var echatuser eChatUser
-	json.Unmarshal([]byte(t.Task_data), &echatuser)
-	log.Infoln("@@@@EchatAddChannel:", echatuser)
+	var srsuser srs_eChatUser
+	json.Unmarshal([]byte(t.Task_data), &srsuser)
+	log.Infoln("@@@@EchatAddChannel:", srsuser)
 
-	err := echatchannel.store(echatuser)
+	err := echatchannel.store(srsuser)
 	if err != nil {
 		log.Errorln("@@@@EchatAddChannel :", echatchannel, " err:", err)
 	}
@@ -130,10 +130,12 @@ func echatUserInChannel(channel *eChatChannel, uid string) bool {
 
 func EchatAddUserToChannel(t Task) {
 	var channel eChatChannel
-	var echatuser eChatUser
-	json.Unmarshal([]byte(t.Task_data), &echatuser)
-	log.Infoln("@@@@EchatAddUserToChannel:", echatuser, "to", t.User_id)
+	var srsuser srs_eChatUser
+	var echatuser *eChatUser
+	json.Unmarshal([]byte(t.Task_data), &srsuser)
+	log.Infoln("@@@@EchatAddUserToChannel:", srsuser, "to", t.User_id)
 	channel.Uid = t.User_id
+	echatuser = srsuser.User
 	value, ok := mapeChatChannels.Load(channel.Uid)
 	if ok {
 		echatchannel := value.(*eChatChannel)
