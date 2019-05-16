@@ -29,6 +29,8 @@ type MemStatus struct {
 }
 
 type SysState struct {
+	IP    string  `json:"ip"`
+	Port  string  `json:"port"`
 	Cpu   float64 `json:"cpu"`
 	Mem   float64 `json:"mem"`
 	Links int     `json:"links"`
@@ -175,4 +177,12 @@ func GetStringMd5(s string) string {
 	md5.Write([]byte(s))
 	md5Str := hex.EncodeToString(md5.Sum(nil))
 	return md5Str
+}
+
+func PanicRecover() func() {
+	return func() {
+		if r := recover(); r != nil {
+			log.Errorf("捕获到的错误：%s\n", r)
+		}
+	}
 }
