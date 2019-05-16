@@ -30,7 +30,8 @@ func init() {
 
 func (rtmp ServiceRTMP) SLServiceStart() {
 	//func videoserverstart() {
-	defer Func_runningtime_trace()()
+	//defer Func_runningtime_trace()()
+	defer PanicRecover()()
 	servers := config.ZK_servers
 	_, err := rtsclient.NewClient(servers, config.Type, config.IP, config.Port, 1)
 	Check_err(err)
@@ -43,7 +44,7 @@ func (rtmp ServiceRTMP) SLServiceStart() {
 	autonode.Name = "[" + config.IP + ":" + strconv.Itoa(config.Port) + "]"
 	rtsclient.Register(&autonode)
 
-	//log.Infof("%s:%s devname:%s", APP_NAME, GetFuncName(), GetInterfaceNameFromIp(config.IP))
+	eChatCannelInit()
 
 	go srsmanager()
 
@@ -54,8 +55,9 @@ func (rtmp ServiceRTMP) SLServiceStart() {
 		//report info
 		mem := MemUsedPersent()
 		cpu := CpuUsedPersent()
-		wb, rb := BandwidthUsed(GetInterfaceNameFromIp(config.IP))
-		sum, _ := get_summaries()
+		//wb, rb := BandwidthUsed(GetInterfaceNameFromIp(config.IP))
+		wb, rb := BandwidthUsed(config.Dev)
+		sum, _ := get_summaries("127.0.0.1:1985")
 		if sum != nil {
 			if sysstate.Links == 0 {
 				log.Errorln("srs start!")
@@ -73,9 +75,11 @@ func (rtmp ServiceRTMP) SLServiceStart() {
 			sysstate.Mem = mem
 			sysstate.NetRX = rb
 			sysstate.NetTX = wb
+			sysstate.IP = config.IP
+			sysstate.Port = strconv.Itoa(config.Port)
 			info, _ := json.Marshal(sysstate)
 			//fmt.Println(string(info))
-			autonode.Date = info
+			autonode.Data = info
 			rtsclient.Set(&autonode)
 		}
 		wblast += wb
