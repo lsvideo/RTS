@@ -1,0 +1,108 @@
+// sl_log.go
+package sl_log
+
+import (
+	//	"fmt"
+	"os"
+	"path"
+	"path/filepath"
+	"strings"
+	"time"
+
+	"github.com/lestrrat-go/file-rotatelogs"
+	"github.com/pkg/errors"
+	"github.com/rifflock/lfshook"
+	"github.com/sirupsen/logrus"
+)
+
+var Log *logrus.Logger = nil
+
+func getCurrentDirectory() string {
+	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+	if err != nil {
+		Log.Fatal(err)
+	}
+	return strings.Replace(dir, "\\", "/", -1)
+}
+
+// config logrus log to local filesystem, with file rotation
+
+func ConfigLocalFilesystemLogger(logPath string, logFileName string, maxAge time.Duration, rotationTime time.Duration) {
+	baseLogPath := path.Join(logPath, logFileName)
+	writer, err := rotatelogs.New(
+		baseLogPath+".%Y%m%d%H%M",
+		rotatelogs.WithLinkName(baseLogPath),      // 生成软链，指向最新日志文件
+		rotatelogs.WithMaxAge(maxAge),             // 文件最大保存时间
+		rotatelogs.WithRotationTime(rotationTime), // 日志切割时间间隔
+	)
+	if err != nil {
+		logrus.Errorf("config local file system logger error. %+v", errors.WithStack(err))
+	}
+	/*
+		lfHook := lfshook.NewHook(lfshook.WriterMap{
+			log.DebugLevel: writer, // 为不同级别设置不同的输出目的
+			log.InfoLevel:  writer,
+			log.WarnLevel:  writer,
+			log.ErrorLevel: writer,
+			log.FatalLevel: writer,
+			log.PanicLevel: writer,
+		})
+	*/
+
+	pathMap := lfshook.WriterMap{
+		logrus.InfoLevel:  writer,
+		logrus.ErrorLevel: writer,
+	}
+
+	lfHook := lfshook.NewHook(
+		pathMap,
+		&logrus.TextFormatter{},
+	)
+	Log.AddHook(lfHook)
+}
+
+func init() {
+	if Log == nil {
+		Log = logrus.New()
+		Log.SetOutput(os.Stdout)
+		ConfigLocalFilesystemLogger(getCurrentDirectory(), "test.log", 60*24*time.Hour, 24*time.Hour)
+		//设置输出样式，自带的只有两种样式logrus.JSONFormatter{}和logrus.TextFormatter{}
+		//customFormatter := new(logrus.TextFormatter)
+		//customFormatter.FullTimestamp = true                        // 显示完整时间
+		//customFormatter.TimestampFormat = "2006-01-02 15:04:05:001" // 时间格式
+		//customFormatter.DisableTimestamp = false                    // 禁止显示时间
+		//customFormatter.DisableColors = false                       // 禁止颜色显示
+
+		//Log.SetFormatter(customFormatter)
+
+		//设置output,默认为stderr,可以为任何io.Writer，比如文件*os.File
+		//Log.SetOutput(os.Stdout)
+		// You could set this to any `io.Writer` such as a file
+		//file, err := os.OpenFile("./logtest.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+		//if err == nil {
+		//	Log.Info("Open /var/log/logtest.log")
+		//	Log.Out = file
+		//} else {
+		//	Log.Info("Failed to log to file, using default stderr")
+		//	panic(err)
+		//}
+		//fmt.Println(os.Hostname())
+		//设置最低loglevel
+		Log.SetLevel(logrus.InfoLevel)
+	}
+
+}
+
+func SetLogLevel(level string) {
+	switch level {
+	case "info":
+		Log.SetLevel(logrus.InfoLevel)
+		break
+	case "debug":
+		Log.SetLevel(logrus.DebugLevel)
+		break
+	case "warning":
+		Log.SetLevel(logrus.WarnLevel)
+		break
+	}
+}
