@@ -107,6 +107,27 @@ func (task Task) Do() error {
 	case "video.GetTokenResp":
 		RunCommand("video.GetTokenResp", task)
 		break
+	case "video.StreamStop":
+		RunCommand("video.StreamStop", task)
+		break
+	case "eChatAddUser":
+		RunCommand("eChatAddUser", task)
+		break
+	case "eChatDeleteUser":
+		RunCommand("eChatDeleteUser", task)
+		break
+	case "eChatAddChannel":
+		RunCommand("eChatAddChannel", task)
+		break
+	case "eChatDeleteChannel":
+		RunCommand("eChatDeleteChannel", task)
+		break
+	case "eChatAddUserToChannel":
+		RunCommand("eChatAddUserToChannel", task)
+		break
+	case "eChatDeleteUserFromChannel":
+		RunCommand("eChatDeleteUserFromChannel", task)
+		break
 	default:
 		fmt.Printf("unknown cmd!!!\n")
 	}

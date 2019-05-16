@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
-	"strings"
+	"net/url"
+	"strconv"
+	//	"strings"
 )
 
 var Conns uint32
@@ -38,10 +40,42 @@ type system_info struct {
 	Conn_srs int `json:"conn_srs"`
 }
 
-func get_summaries() (sum *summaries, err error) {
-	resp, err := http.Post("http://127.0.0.1:1985/api/v1/summaries",
-		"application/x-www-form-urlencoded",
-		strings.NewReader("name=slty"))
+type SrsRTMP struct {
+	Action     string `json:"action"` // 名称
+	Client_id  int    `json:"client_id"`
+	IP         string `json:"ip"`
+	Vhost      string `json:"vhost"`
+	App        string `json:"app"`
+	Stream     string `json:"stream"`
+	TcUrl      string `json:"tcUrl"`
+	PageUrl    string `json:"pageUrl"`
+	Param      string `json:"param"`
+	Send_bytes int    `json:"send_bytes"`
+	Recv_bytes int    `json:"recv_bytes"`
+}
+
+type srs_client struct {
+	Id      int    `json:"id"`
+	Vhost   int    `json:"vhost"`
+	Stream  int    `json:"stream"`
+	IP      string `json:"ip"`
+	PageUrl string `json:"pageUrl"`
+	SwfUrl  string `json:"swfUrl"`
+	TcUrl   string `json:"tcUrl"`
+	Url     string `json:"url"`
+	Action  string `json:"type"`
+	Publish bool   `json:"publish"`
+	Alive   uint64 `json:"alive"`
+}
+
+type srs_client_info struct {
+	Code   int        `json:"code"` // 名称
+	Server int        `json:"server"`
+	Client srs_client `json:"client"`
+}
+
+func get_summaries(url string) (sum *summaries, err error) {
+	resp, err := http.Get("http://" + url + "/api/v1/summaries")
 	if err != nil {
 		//log.Println(err)
 		return nil, err
@@ -67,14 +101,78 @@ func get_summaries() (sum *summaries, err error) {
 	return sum, nil
 }
 
+func get_client_info(url string, client_id string) (client_info *srs_client_info, err error) {
+	resp, err := http.Get("http://" + url + "/api/v1/clients/" + client_id)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		// handle error
+		return nil, err
+	}
+
+	//log.Println(string(body))
+
+	var client srs_client_info
+	client_info = &client
+	err = json.Unmarshal(body, client_info) //解析json格式数据
+	if err != nil {
+		log.Printf("Failed unmarshalling json: %s\n", err)
+		return nil, err
+	}
+	return client_info, nil
+}
+
 func srs_connect(w http.ResponseWriter, r *http.Request) {
+	var res bool = true
 	body, _ := ioutil.ReadAll(r.Body)
 	body_str := string(body)
 	log.Println("message: " + body_str)
 	log.Println("resp: " + r.RemoteAddr)
+	var srsData SrsRTMP
+	if err := json.Unmarshal(body, &srsData); err == nil {
+		log.Println("!!!!!", srsData)
+	} else {
+		log.Println(err)
+	}
+	//解析参数
+	u, err := url.Parse(srsData.TcUrl)
+	if err != nil {
+		res = false
+	}
+	log.Infoln(u.RawQuery)
+	m, err := url.ParseQuery(u.RawQuery)
+	if err != nil {
+		log.Errorln("Parse rtmp URL err:", err)
+	} else {
+		log.Infoln(m)
+		log.Infoln("token:", m.Get("token"))
+		log.Infoln("uid:", m.Get("uid"))
+		log.Infoln("IP:", srsData.IP)
 
+		var token Token
+		uid := m.Get("uid")
+		strtoken := m.Get("token")
+		strip := srsData.IP
+
+		//token 验证
+		token.GetToken(uid)
+		err := token.Verify(strtoken, strip)
+		if err != nil {
+			log.Errorln("Token verify uid:", uid, "ip: ", strip, " err:", err)
+			res = false
+		}
+	}
+	res = true
 	w.WriteHeader(200)
-	w.Write([]byte("0"))
+	if res {
+		w.Write([]byte("0"))
+	} else {
+		w.Write([]byte("1"))
+	}
 
 }
 
@@ -88,42 +186,243 @@ func srs_close(w http.ResponseWriter, r *http.Request) {
 }
 
 func srs_publish(w http.ResponseWriter, r *http.Request) {
+	var res bool = true
 	body, _ := ioutil.ReadAll(r.Body)
 	body_str := string(body)
 	log.Println("message: " + body_str)
 	log.Println("resp: " + r.RemoteAddr)
+
+	var srsData SrsRTMP
+	if err := json.Unmarshal(body, &srsData); err == nil {
+		log.Println("!!!!!", srsData)
+	} else {
+		log.Println(err)
+	}
+	//解析参数
+	u, err := url.Parse(srsData.TcUrl)
+	if err != nil {
+		res = false
+	}
+	log.Infoln(u.RawQuery)
+	m, err := url.ParseQuery(u.RawQuery)
+	if err != nil {
+		log.Errorln("Parse rtmp URL err:", err)
+	} else {
+		log.Infoln(m)
+		log.Infoln("uid:", m.Get("uid"))
+		log.Infoln("cid:", m.Get("cid"))
+		log.Infoln("type:", m.Get("type"))
+		log.Infoln("opt:", m.Get("opt"))
+
+		var echatuser eChatUser
+		echatuser.Uid = m.Get("uid")
+		echatuser.Cid = m.Get("cid")
+		echatuser.Url = u.Host
+		echatuser.Action = m.Get("type")
+		echatuser.Option = m.Get("opt")
+		//AddTask()
+		var task Task
+		task.Task_command = "eChatAddUser"
+		buf, _ := json.Marshal(echatuser)
+		task.Task_data = string(buf)
+		AddTask(task)
+
+		//var echatchannel eChatChannel
+		//echatchannel.Uid = m.Get("uid")
+		task.Task_command = "eChatAddChannel"
+		//buf, _ = json.Marshal(echatchannel)
+		//task.Task_data = string(buf)
+		AddTask(task)
+	}
+
+	res = true
 	w.WriteHeader(200)
-	w.Write([]byte("0"))
+	if res {
+		w.Write([]byte("0"))
+	} else {
+		w.Write([]byte("1"))
+	}
 }
 
 func srs_unpublish(w http.ResponseWriter, r *http.Request) {
+	var res bool = true
 	body, _ := ioutil.ReadAll(r.Body)
 	body_str := string(body)
 	log.Println("message: " + body_str)
 	log.Println("resp: " + r.RemoteAddr)
+	var srsData SrsRTMP
+	if err := json.Unmarshal(body, &srsData); err == nil {
+		log.Println("!!!!!", srsData)
+	} else {
+		log.Println(err)
+	}
+	//解析参数
+	u, err := url.Parse(srsData.Param)
+	if err != nil {
+		res = false
+	}
+	log.Infoln(u.RawQuery)
+	m, err := url.ParseQuery(u.RawQuery)
+	if err != nil {
+		log.Errorln("Parse rtmp URL err:", err)
+	} else {
+		log.Infoln(m)
+		log.Infoln("uid:", m.Get("uid"))
+		log.Infoln("cid:", m.Get("cid"))
+		log.Infoln("type:", m.Get("type"))
+		log.Infoln("opt:", m.Get("opt"))
+
+		var echatuser eChatUser
+		echatuser.Uid = m.Get("uid")
+		echatuser.Cid = m.Get("cid")
+		echatuser.Url = u.Host
+		echatuser.Action = m.Get("type")
+		echatuser.Option = m.Get("opt")
+		//AddTask()
+		var task Task
+		task.Task_command = "eChatDeleteUser"
+		buf, _ := json.Marshal(echatuser)
+		task.Task_data = string(buf)
+		AddTask(task)
+
+		var echatchannel eChatChannel
+		echatchannel.Uid = m.Get("uid")
+		task.Task_command = "eChatDeleteChannel"
+		buf, _ = json.Marshal(echatchannel)
+		task.Task_data = string(buf)
+		AddTask(task)
+	}
+
+	res = true
 	w.WriteHeader(200)
-	w.Write([]byte("0"))
+	if res {
+		w.Write([]byte("0"))
+	} else {
+		w.Write([]byte("1"))
+	}
 }
 
 func srs_play(w http.ResponseWriter, r *http.Request) {
+	var res bool = true
 	body, _ := ioutil.ReadAll(r.Body)
 	body_str := string(body)
 	log.Println("message: " + body_str)
 	log.Println("resp: " + r.RemoteAddr)
+	var srsData SrsRTMP
+	if err := json.Unmarshal(body, &srsData); err == nil {
+		log.Println("!!!!!", srsData)
+	} else {
+		log.Println(err)
+	}
+	//解析参数
+	u, err := url.Parse(srsData.Param)
+	if err != nil {
+		res = false
+	}
+	log.Infoln(u.RawQuery)
+	m, err := url.ParseQuery(u.RawQuery)
+	if err != nil {
+		log.Errorln("Parse rtmp URL err:", err)
+	} else {
+		log.Infoln(m)
+		log.Infoln("uid:", m.Get("uid"))
+		log.Infoln("cid:", m.Get("cid"))
+		log.Infoln("type:", m.Get("type"))
+		log.Infoln("opt:", m.Get("opt"))
+
+		var echatuser eChatUser
+		echatuser.Uid = m.Get("uid")
+		echatuser.Cid = m.Get("cid")
+		echatuser.Url = config.IP + ":" + strconv.Itoa(config.Port) //SRSManger和SRS一一对应 config中的IP:PORT 即为SRS地址
+		echatuser.Action = m.Get("type")
+		echatuser.Option = m.Get("opt")
+		//AddTask()
+		var task Task
+		//拉流不记录
+		task.Task_command = "eChatAddUser"
+		buf, _ := json.Marshal(echatuser)
+		task.Task_data = string(buf)
+		AddTask(task)
+
+		//var echatchannel eChatChannel
+		//echatchannel.Uid = srsData.Stream
+		task.User_id = srsData.Stream
+		task.Task_command = "eChatAddUserToChannel"
+		//buf, _ = json.Marshal(echatchannel)
+		//task.Task_data = string(buf)
+		AddTask(task)
+	}
+
+	res = true
 	w.WriteHeader(200)
-	w.Write([]byte("0"))
+	if res {
+		w.Write([]byte("0"))
+	} else {
+		w.Write([]byte("1"))
+	}
 }
 
 func srs_stop(w http.ResponseWriter, r *http.Request) {
+	var res bool = true
 	body, _ := ioutil.ReadAll(r.Body)
 	body_str := string(body)
 	log.Println("message: " + body_str)
 	log.Println("resp: " + r.RemoteAddr)
+	var srsData SrsRTMP
+	if err := json.Unmarshal(body, &srsData); err == nil {
+		log.Println("!!!!!", srsData)
+	} else {
+		log.Println(err)
+	}
+	//解析参数
+	u, err := url.Parse(srsData.Param)
+	if err != nil {
+		res = false
+	}
+	log.Infoln(u.RawQuery)
+	m, err := url.ParseQuery(u.RawQuery)
+	if err != nil {
+		log.Errorln("Parse rtmp URL err:", err)
+	} else {
+		log.Infoln(m)
+		log.Infoln("uid:", m.Get("uid"))
+		log.Infoln("cid:", m.Get("cid"))
+		log.Infoln("type:", m.Get("type"))
+		log.Infoln("opt:", m.Get("opt"))
+
+		var echatuser eChatUser
+		echatuser.Uid = m.Get("uid")
+		echatuser.Cid = m.Get("cid")
+		echatuser.Url = u.Host
+		echatuser.Action = m.Get("type")
+		echatuser.Option = m.Get("opt")
+		//AddTask()
+		var task Task
+		task.Task_command = "eChatDeleteUser"
+		buf, _ := json.Marshal(echatuser)
+		task.Task_data = string(buf)
+		AddTask(task)
+
+		var echatchannel eChatChannel
+		echatchannel.Uid = srsData.Stream
+		task.User_id = m.Get("uid")
+		task.Task_command = "eChatDeleteUserFromChannel"
+		buf, _ = json.Marshal(echatchannel)
+		task.Task_data = string(buf)
+		AddTask(task)
+	}
+
+	res = true
 	w.WriteHeader(200)
-	w.Write([]byte("0"))
+	if res {
+		w.Write([]byte("0"))
+	} else {
+		w.Write([]byte("1"))
+	}
 }
 
 func srsmanager() {
+	defer PanicRecover()()
 	http.HandleFunc("/srs_connect", srs_connect)
 	http.HandleFunc("/srs_close", srs_close)
 	http.HandleFunc("/srs_publish", srs_publish)
