@@ -4,10 +4,13 @@ package main
 import (
 	"fmt"
 	//"math"
+	//"bytes"
 	"crypto/md5"
 	"encoding/hex"
 	"net"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -185,4 +188,62 @@ func PanicRecover() func() {
 			log.Errorf("捕获到的错误：%s\n", r)
 		}
 	}
+}
+
+func timespecToTime(ts syscall.Timespec) time.Time {
+	return time.Unix(int64(ts.Sec), int64(ts.Nsec))
+}
+
+func FileCreateTime(filename string) {
+	finfo, _ := os.Stat(filename)
+	// Sys()返回的是interface{}，所以需要类型断言，不同平台需要的类型不一样，linux上为*syscall.Stat_t
+	stat_t := finfo.Sys().(*syscall.Stat_t)
+	fmt.Println(stat_t)
+	// atime，ctime，mtime分别是访问时间，创建时间和修改时间，具体参见man 2 stat
+	fmt.Println(timespecToTime(stat_t.Atim))
+	fmt.Println(timespecToTime(stat_t.Ctim))
+	fmt.Println(timespecToTime(stat_t.Mtim))
+}
+
+func GetFileSize(filename string) int64 {
+	var result int64
+	filepath.Walk(filename, func(path string, f os.FileInfo, err error) error {
+		result = f.Size()
+		return nil
+	})
+	return result
+}
+
+func MoveFile(oldPath string, newPath string) error {
+	err := os.Rename(oldPath, newPath)
+	return err
+}
+
+func GetVideoDuration(filename string) int64 {
+	var result int64
+	filepath.Walk(filename, func(path string, f os.FileInfo, err error) error {
+		result = f.Size()
+		return nil
+	})
+	return result
+}
+
+//阻塞式的执行外部shell命令的函数,等待执行完毕并返回标准输出
+func Exec_shell(s string) (string, error) {
+	//函数返回一个*Cmd，用于使用给出的参数执行name指定的程序
+	//cmd := exec.Command("/bin/bash", "-c", s)
+	//读取io.Writer类型的cmd.Stdout，再通过bytes.Buffer(缓冲byte类型的缓冲器)将byte类型转化为string类型(out.String():这是bytes类型提供的接口)
+	//var out bytes.Buffer
+	//cmd.Stdout = &out
+	//Run执行c包含的命令，并阻塞直到完成。  这里stdout被取出，cmd.Wait()无法正确获取stdin,stdout,stderr，则阻塞在那了
+	//err := cmd.Run()
+	//log.Errorln("Cmd :", s, " Err:", err)
+	//return out.String(), err
+
+	cmd := exec.Command("/bin/bash", "-c", s)
+	out, err := cmd.CombinedOutput()
+	log.Debugln("Cmd :", s, " Err:", err)
+	str := string(out)
+	str = strings.Replace(str, "\n", "", -1)
+	return str, err
 }
