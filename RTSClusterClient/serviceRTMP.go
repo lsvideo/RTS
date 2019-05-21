@@ -56,7 +56,7 @@ func (rtmp ServiceRTMP) SLServiceStart() {
 		mem := MemUsedPersent()
 		cpu := CpuUsedPersent()
 		//wb, rb := BandwidthUsed(GetInterfaceNameFromIp(config.IP))
-		wb, rb := BandwidthUsed(config.Dev)
+		wb, rb := BandwidthUsed(config.Device)
 		sum, _ := get_summaries("127.0.0.1:1985")
 		if sum != nil {
 			if sysstate.Links == 0 {

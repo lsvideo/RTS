@@ -2,19 +2,20 @@
 package main
 
 import (
-	"fmt"
+	"io/ioutil"
 
-	"github.com/astaxie/beego/config/yaml"
+	"gopkg.in/yaml.v2"
 )
 
 type SL_config struct {
 	IP               string
 	Port             int
 	Type             string
-	Dev              string
+	Device           string
 	ZK_servers       []string
 	Penetrate_server string
 	Video_server     string
+	Dvr_path         string
 }
 
 type ServerType int32
@@ -45,29 +46,15 @@ func GetServerType(stype string) ServerType {
 }
 
 func Parse_config(cfgfile string, sl_cfg *SL_config) error {
-	conf, err := yaml.ReadYmlReader(cfgfile)
+	yamlFile, err := ioutil.ReadFile(cfgfile)
+	log.Println("yamlFile:", yamlFile)
 	if err != nil {
-		fmt.Println(err)
-		return err
+		log.Printf("yamlFile.Get err #%v \n", err)
 	}
-	sl_cfg.IP = conf["ip"].(string)
-	sl_cfg.Port = int(conf["port"].(int64))
-	sl_cfg.Type = conf["type"].(string)
-	sl_cfg.Dev = conf["device"].(string)
-	servers := conf["zk_servers"]
-	sl_cfg.Penetrate_server = conf["penetrate_server"].(string)
-	sl_cfg.Video_server = conf["video_server"].(string)
-
-	switch v := servers.(type) {
-	case []interface{}:
-		//fmt.Println("zk_servers is an array: ", len(v))
-		sl_cfg.ZK_servers = make([]string, len(v))
-		for i, u := range v {
-			fmt.Println(i, u)
-			sl_cfg.ZK_servers[i] = u.(string)
-		}
+	err = yaml.Unmarshal(yamlFile, sl_cfg)
+	if err != nil {
+		log.Fatalf("Unmarshal: %v", err)
 	}
-
-	//fmt.Println(sl_cfg)
+	log.Println("conf:", sl_cfg)
 	return nil
 }
