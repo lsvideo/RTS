@@ -15,6 +15,7 @@ const (
 	NodeTypeUser         NodeType = 4
 	NodeTypeChannel      NodeType = 5
 	NodeTypeToken        NodeType = 6
+	NodeTypeVod          NodeType = 7
 )
 
 var (
@@ -26,6 +27,7 @@ var (
 		NodeTypeUser:         "NodeTypeUser",
 		NodeTypeChannel:      "NodeTypeChannel",
 		NodeTypeToken:        "NodeTypeToken",
+		NodeTypeVod:          "NodeTypeVod",
 	}
 )
 
@@ -77,7 +79,8 @@ var (
 	SHANLI_ZK_FUNC_USERS   = "users"
 	SHANLI_ZK_FUNC_CHANNEL = "channels"
 	SHANLI_ZK_FUNC_TOKEN   = "tokens"
-	SHANLI_ZK_FUNC         = []string{SHANLI_ZK_FUNC_AUTO, SHANLI_ZK_FUNC_SERVERS, SHANLI_ZK_FUNC_USERS, SHANLI_ZK_FUNC_CHANNEL, SHANLI_ZK_FUNC_TOKEN}
+	SHANLI_ZK_FUNC_VOD     = "vod"
+	SHANLI_ZK_FUNC         = []string{SHANLI_ZK_FUNC_AUTO, SHANLI_ZK_FUNC_SERVERS, SHANLI_ZK_FUNC_USERS, SHANLI_ZK_FUNC_CHANNEL, SHANLI_ZK_FUNC_TOKEN, SHANLI_ZK_FUNC_VOD}
 	SHANLI_ZK_LOCK         = "lock"
 )
 
@@ -136,6 +139,8 @@ func GetNodePath(parent string, nt NodeType) (finalpath string) {
 		finalpath = GeneratePath(parent, SHANLI_ZK_FUNC_CHANNEL)
 	case NodeTypeToken:
 		finalpath = GeneratePath(parent, SHANLI_ZK_FUNC_TOKEN)
+	case NodeTypeVod:
+		finalpath = GeneratePath(parent, SHANLI_ZK_FUNC_VOD)
 	}
 	return finalpath
 }
