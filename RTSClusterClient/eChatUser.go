@@ -22,6 +22,7 @@ type eChatUser struct {
 type srs_eChatUser struct {
 	Client_id int        `json:"client_id"`
 	Stream    string     `json:"stream"`
+	Dvr_File  string     `json:"dvr_file"`
 	User      *eChatUser `json:"echat_user"`
 }
 
