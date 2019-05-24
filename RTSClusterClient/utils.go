@@ -4,6 +4,7 @@ package main
 import (
 	"fmt"
 	//"math"
+
 	//"bytes"
 	"crypto/md5"
 	"encoding/hex"
@@ -95,7 +96,6 @@ func BandwidthUsed(dev string) (uint64, uint64) {
 			return netio.BytesSent, netio.BytesRecv
 		}
 	}
-	//fmt.Println(iostat)
 	return 0, 0
 }
 
@@ -219,6 +219,11 @@ func MoveFile(oldPath string, newPath string) error {
 	return err
 }
 
+func RemoveFile(file string) error {
+	err := os.Remove(file)
+	return err
+}
+
 func GetVideoDuration(filename string) int64 {
 	var result int64
 	filepath.Walk(filename, func(path string, f os.FileInfo, err error) error {
@@ -246,4 +251,35 @@ func Exec_shell(s string) (string, error) {
 	str := string(out)
 	str = strings.Replace(str, "\n", "", -1)
 	return str, err
+}
+
+type DiskStatus struct {
+	All  uint64 `json:"all"`
+	Used uint64 `json:"used"`
+	Free uint64 `json:"free"`
+}
+
+// disk usage of path/disk
+func DiskUsage(path string) (dfpercent float64) {
+	var disk DiskStatus
+	fs := syscall.Statfs_t{}
+	err := syscall.Statfs(path, &fs)
+	if err != nil {
+		log.Warningln("Get diskUsage err:", err)
+		return
+	}
+	//disk.All = fs.Blocks * uint64(fs.Bsize) //块 x 块大小 -》 Byte
+	disk.All = fs.Blocks
+	disk.Free = fs.Bfree
+	disk.Used = disk.All - disk.Free
+
+	//fmt.Println("DiskUsage:", disk)
+	dfpercent = Decimal(float64(disk.Used) / float64(disk.All))
+	fmt.Println("UsagePercent:", dfpercent)
+
+	//round := func(x float64) int { return int(math.Floor(x + 0.5)) }
+
+	//idfpercent := round(float64(disk.Used) / float64(disk.All) * 100)
+	//fmt.Println("UsagePercent int:", idfpercent)
+	return
 }
