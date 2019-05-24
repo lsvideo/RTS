@@ -6,9 +6,12 @@ import (
 
 	"sl_log"
 	//"strconv"
+	"flag"
+	"fmt"
 	"syscall"
 
 	//"time"
+	"RTSClusterClient/version"
 	"zkhelper"
 )
 
@@ -20,17 +23,45 @@ var signalChan = make(chan os.Signal, 1)
 var serverexit = make(chan int, 1)
 
 var rtsclient zkhelper.ZKClient
+var Version string
 
 func init() {
+	var showVersion bool = false
+	var cfgFile string = ""
+	flag.BoolVar(&showVersion, "v", false, "current version")
+	flag.BoolVar(&showVersion, "version", false, "current version")
+	flag.StringVar(&cfgFile, "c", "", "config file")
+	flag.StringVar(&cfgFile, "config", "", "config file")
+	flag.Parse()
+
+	if showVersion == true {
+		fmt.Println(version.FullVersion())
+		os.Exit(0)
+	}
+	if cfgFile == "" {
+		fmt.Println("Please specify configuration file!")
+		os.Exit(0)
+	}
+
+	config.config_file = cfgFile
 	sl_log.SetLogLevel("info")
 	sl_log.SetLogPath("./" + GetAppName() + ".log")
-	Parse_config("./sl.yaml", &config)
+	Parse_config(&config)
 	//Parse_config("./cm.yaml", &config)
 	log.Infoln("get config:", config)
 
 }
 
 func exitclean() int {
+
+	logFile, err := os.OpenFile("./fatal.log", os.O_CREATE|os.O_APPEND|os.O_RDWR, 0660)
+	if err != nil {
+		log.Println("服务启动出错", "打开异常日志文件fatal.log失败", err)
+		return 1
+	}
+	// 将进程标准出错重定向至文件，进程崩溃时运行时将向该文件记录协程调用栈信息
+	syscall.Dup2(int(logFile.Fd()), int(os.Stderr.Fd()))
+
 	signal.Notify(signalChan, os.Interrupt, os.Kill) //进程采集信号量。
 	select {
 	case <-signalChan:
@@ -53,15 +84,7 @@ func main() {
 	st := GetServerType(config.Type)
 	service := mapService[st]
 	go service.SLServiceStart()
-
-	logFile, err := os.OpenFile("./fatal.log", os.O_CREATE|os.O_APPEND|os.O_RDWR, 0660)
-	if err != nil {
-		log.Println("服务启动出错", "打开异常日志文件失败", err)
-		return
-	}
-	// 将进程标准出错重定向至文件，进程崩溃时运行时将向该文件记录协程调用栈信息
-	syscall.Dup2(int(logFile.Fd()), int(os.Stderr.Fd()))
-
+	go cronStart()
+	defer cronStop()
 	exitclean()
-
 }

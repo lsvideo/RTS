@@ -16,6 +16,7 @@ type SL_config struct {
 	Penetrate_server string
 	Video_server     string
 	Dvr_path         string
+	config_file      string
 }
 
 type ServerType int32
@@ -45,8 +46,8 @@ func GetServerType(stype string) ServerType {
 	}
 }
 
-func Parse_config(cfgfile string, sl_cfg *SL_config) error {
-	yamlFile, err := ioutil.ReadFile(cfgfile)
+func Parse_config(sl_cfg *SL_config) error {
+	yamlFile, err := ioutil.ReadFile(sl_cfg.config_file)
 	log.Println("yamlFile:", yamlFile)
 	if err != nil {
 		log.Printf("yamlFile.Get err #%v \n", err)
