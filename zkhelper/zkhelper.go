@@ -268,7 +268,7 @@ func (client *ZKClient) Set(node *ZKNode) {
 
 func (client *ZKClient) Delete(node *ZKNode) error {
 	path := node.Path
-	err, s := client.PathExist(path)
+	_, s, err := client.Exist(node)
 
 	err = client.conn.Delete(path, s.Version)
 	if err != nil {
@@ -278,8 +278,8 @@ func (client *ZKClient) Delete(node *ZKNode) error {
 	return nil
 }
 
-func (client *ZKClient) Exist(node *ZKNode) (bool, error) {
-	exists, _, err := client.conn.Exists(node.Path)
+func (client *ZKClient) Exist(node *ZKNode) (bool, *zk.Stat, error) {
+	exists, s, err := client.conn.Exists(node.Path)
 
-	return exists, err
+	return exists, s, err
 }
