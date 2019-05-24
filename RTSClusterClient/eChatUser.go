@@ -40,7 +40,7 @@ func (u *srs_eChatUser) store() error {
 	companynode.SetServiceType(zkhelper.ServiceTypeRTMP)
 	companynode.SetPath(zkhelper.GetNodePath(zkhelper.GetServicePath(companynode.ServiceType), zkhelper.NodeTypeUser) + "/" + u.User.Cid)
 	companynode.SetName(u.User.Cid)
-	exists, err := rtsclient.Exist(&companynode)
+	exists, _, err := rtsclient.Exist(&companynode)
 	if err != nil {
 		return err
 	}
@@ -55,7 +55,7 @@ func (u *srs_eChatUser) store() error {
 	usernode = companynode
 	usernode.SetPath(usernode.Path + "/" + u.User.Uid)
 	usernode.SetName(u.User.Uid)
-	exists, err = rtsclient.Exist(&usernode)
+	exists, _, err = rtsclient.Exist(&usernode)
 	if err != nil {
 		return err
 	}
@@ -77,7 +77,7 @@ func (u *srs_eChatUser) store() error {
 	typenode.Data = buf
 	//err = rtsclient.CreateSequence(&typenode)
 
-	exists, err = rtsclient.Exist(&typenode)
+	exists, _, err = rtsclient.Exist(&typenode)
 	if err != nil {
 		return err
 	}

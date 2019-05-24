@@ -40,7 +40,7 @@ func eChatChannelNodeInit() {
 	eChatChannelNode.ServiceType = zkhelper.GetServiceType(config.Type)
 	eChatChannelNode.Name = config.IP + ":" + strconv.Itoa(config.Port)
 	eChatChannelNode.Path = zkhelper.GetNodePath(zkhelper.GetServicePath(eChatChannelNode.ServiceType), zkhelper.NodeTypeChannel) + "/" + eChatChannelNode.Name
-	exists, err := rtsclient.Exist(&eChatChannelNode)
+	exists, _, err := rtsclient.Exist(&eChatChannelNode)
 	if err != nil {
 		log.Errorln(err)
 	}
@@ -144,7 +144,7 @@ func (c *eChatChannel) store(srsuser srs_eChatUser) error {
 		channelnode.SetName(c.Uid)
 		buf, _ := json.Marshal(srsuser)
 		channelnode.SetData(buf)
-		exists, err := rtsclient.Exist(&channelnode)
+		exists, _, err := rtsclient.Exist(&channelnode)
 		if err != nil {
 			return err
 		}
