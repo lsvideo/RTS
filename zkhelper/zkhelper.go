@@ -247,7 +247,7 @@ func (client *ZKClient) Close() {
 }
 
 func (client *ZKClient) Get(node *ZKNode) (string, error) {
-	err, _ := client.PathExist(node.Path)
+	_, _, err := client.Exist(node)
 	if err != nil {
 		return "", err
 	}
