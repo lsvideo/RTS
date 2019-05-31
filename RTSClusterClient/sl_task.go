@@ -130,11 +130,13 @@ func (task Task) Do() error {
 		break
 	case "eChatDvr":
 		RunCommand("eChatDvr", task)
+	case "eChatDelVodFile":
+		RunCommand("eChatDelVodFile", task)
 		break
 	default:
 		fmt.Printf("unknown cmd!!!\n")
 	}
-	log.Warningln("Do the response!!!!!!!!!!!!!!", task.User_id, task)
+	log.Warningln("Task finished", task.User_id, task)
 	//生成应答json
 	//fmt.Println(task)
 
