@@ -91,7 +91,7 @@ func get_summaries(url string) (sum *summaries, err error) {
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		// handle error
-		//log.Println(err)
+		log.Errorln(err)
 		return nil, err
 	}
 
@@ -101,7 +101,7 @@ func get_summaries(url string) (sum *summaries, err error) {
 	sum = &data
 	err = json.Unmarshal(body, sum) //解析json格式数据
 	if err != nil {
-		//log.Printf("Failed unmarshalling json: %s\n", err)
+		log.Errorf("Failed unmarshalling json: %s\n", err)
 		return nil, err
 	}
 	return sum, nil
@@ -140,16 +140,16 @@ func srs_connect(w http.ResponseWriter, r *http.Request) {
 	log.Println("resp: " + r.RemoteAddr)
 	var srsData SrsRTMP
 	if err := json.Unmarshal(body, &srsData); err == nil {
-		log.Println("!!!!!", srsData)
+		log.Println("srsData:", srsData)
 	} else {
-		log.Println(err)
+		log.Errorln(err)
 	}
 	//解析参数
 	u, err := url.Parse(srsData.TcUrl)
 	if err != nil {
+		log.Errorln(err)
 		res = false
 	}
-	log.Infoln(u.RawQuery)
 	m, err := url.ParseQuery(u.RawQuery)
 	if err != nil {
 		log.Errorln("Parse rtmp URL err:", err)
@@ -166,14 +166,14 @@ func srs_connect(w http.ResponseWriter, r *http.Request) {
 
 		//token 验证
 		//token.GetToken(uid)
-		token.GetToken("1001")
+		token.GetToken(uid)
 		err := token.Verify(strtoken, strip)
 		if err != nil {
 			log.Errorln("Token verify uid:", uid, "ip: ", strip, " err:", err)
 			res = false
 		}
 	}
-	res = true
+
 	w.WriteHeader(200)
 	if res {
 		w.Write([]byte("0"))
@@ -201,19 +201,21 @@ func srs_publish(w http.ResponseWriter, r *http.Request) {
 
 	var srsData SrsRTMP
 	if err := json.Unmarshal(body, &srsData); err == nil {
-		log.Println("!!!!!", srsData)
+		log.Println("srsData:", srsData)
 	} else {
-		log.Println(err)
+		res = false
+		log.Errorln(err)
 	}
 	//解析参数
 	u, err := url.Parse(srsData.TcUrl)
 	if err != nil {
 		res = false
+		log.Errorln(err)
 	}
-	log.Infoln(u.RawQuery)
 	m, err := url.ParseQuery(u.RawQuery)
 	if err != nil {
 		log.Errorln("Parse rtmp URL err:", err)
+		res = false
 	} else {
 		log.Infoln(m)
 		log.Infoln("uid:", m.Get("uid"))
@@ -251,7 +253,6 @@ func srs_publish(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	res = true
 	w.WriteHeader(200)
 	if res {
 		w.Write([]byte("0"))
@@ -268,18 +269,20 @@ func srs_unpublish(w http.ResponseWriter, r *http.Request) {
 	log.Println("resp: " + r.RemoteAddr)
 	var srsData SrsRTMP
 	if err := json.Unmarshal(body, &srsData); err == nil {
-		log.Println("!!!!!", srsData)
+		log.Println("srsData:", srsData)
 	} else {
-		log.Println(err)
+		res = false
+		log.Errorln(err)
 	}
 	//解析参数
 	u, err := url.Parse(srsData.Param)
 	if err != nil {
 		res = false
+		log.Errorln(err)
 	}
-	log.Infoln(u.RawQuery)
 	m, err := url.ParseQuery(u.RawQuery)
 	if err != nil {
+		res = false
 		log.Errorln("Parse rtmp URL err:", err)
 	} else {
 		log.Infoln(m)
@@ -310,7 +313,6 @@ func srs_unpublish(w http.ResponseWriter, r *http.Request) {
 		AddTask(task)
 	}
 
-	res = true
 	w.WriteHeader(200)
 	if res {
 		w.Write([]byte("0"))
@@ -327,18 +329,20 @@ func srs_play(w http.ResponseWriter, r *http.Request) {
 	log.Println("resp: " + r.RemoteAddr)
 	var srsData SrsRTMP
 	if err := json.Unmarshal(body, &srsData); err == nil {
-		log.Println("!!!!!", srsData)
+		log.Println("srsData:", srsData)
 	} else {
-		log.Println(err)
+		res = false
+		log.Errorln(err)
 	}
 	//解析参数
 	u, err := url.Parse(srsData.Param)
 	if err != nil {
 		res = false
+		log.Errorln(err)
 	}
-	log.Infoln(u.RawQuery)
 	m, err := url.ParseQuery(u.RawQuery)
 	if err != nil {
+		res = false
 		log.Errorln("Parse rtmp URL err:", err)
 	} else {
 		//channel户存在为前提
@@ -379,12 +383,11 @@ func srs_play(w http.ResponseWriter, r *http.Request) {
 			//buf, _ = json.Marshal(echatchannel)
 			//task.Task_data = string(buf)
 			AddTask(task)
-		} else {
-			res = false
+			//		} else {
+			//			res = false
 		}
 	}
 
-	res = true
 	w.WriteHeader(200)
 	if res {
 		w.Write([]byte("0"))
@@ -401,18 +404,21 @@ func srs_stop(w http.ResponseWriter, r *http.Request) {
 	log.Println("resp: " + r.RemoteAddr)
 	var srsData SrsRTMP
 	if err := json.Unmarshal(body, &srsData); err == nil {
-		log.Println("!!!!!", srsData)
+		log.Println("srsData:", srsData)
 	} else {
-		log.Println(err)
+		res = false
+		log.Errorln(err)
 	}
 	//解析参数
 	u, err := url.Parse(srsData.Param)
 	if err != nil {
 		res = false
+		log.Errorln(err)
 	}
-	log.Infoln(u.RawQuery)
+
 	m, err := url.ParseQuery(u.RawQuery)
 	if err != nil {
+		res = false
 		log.Errorln("Parse rtmp URL err:", err)
 	} else {
 		//用户存在为前提
@@ -449,7 +455,6 @@ func srs_stop(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	res = true
 	w.WriteHeader(200)
 	if res {
 		w.Write([]byte("0"))
@@ -466,19 +471,21 @@ func srs_dvr(w http.ResponseWriter, r *http.Request) {
 	log.Println("resp: " + r.RemoteAddr)
 	var srsData SrsRTMP
 	if err := json.Unmarshal(body, &srsData); err == nil {
-		log.Println("!!!!!", srsData)
+		log.Println("srsData:", srsData)
 	} else {
-		log.Println(err)
+		res = false
+		log.Errorln(err)
 	}
 	//解析参数
 	u, err := url.Parse(srsData.Param)
 	if err != nil {
 		res = false
+		log.Errorln(err)
 	}
-	log.Infoln(u.RawQuery)
 	m, err := url.ParseQuery(u.RawQuery)
 	if err != nil {
 		log.Errorln("Parse rtmp URL err:", err)
+		res = false
 	} else {
 		//用户存在为前提
 
@@ -500,7 +507,7 @@ func srs_dvr(w http.ResponseWriter, r *http.Request) {
 		srsuser.Stream = srsData.Stream
 		srsuser.User = &echatuser
 		srsuser.Dvr_File = srsData.Dvr_Path + srsData.Dvr_File[strings.Index(srsData.Dvr_File, "/"):]
-		log.Infoln("IIIIIIIIIIIIIIIIIIIIIIIIsrsuser:", srsuser)
+		log.Infoln("DVR srsuser:", srsuser)
 		var task Task
 		task.Task_command = "eChatDvr"
 		buf, _ := json.Marshal(srsuser)
@@ -508,7 +515,6 @@ func srs_dvr(w http.ResponseWriter, r *http.Request) {
 		AddTask(task)
 	}
 
-	res = true
 	w.WriteHeader(200)
 	if res {
 		w.Write([]byte("0"))
