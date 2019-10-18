@@ -10,12 +10,11 @@ import (
 var mapeChatUser sync.Map
 
 type eChatUser struct {
-	Uid    string `json:"uid"`  //用户id
-	Cid    string `json:"cid"`  //公司id
-	Action string `json:"type"` //行为类型
-	Option string `json:"opt"`  //视频操作类型
-	Url    string `json:"url"`  //用户使用的URL
-	//	DstUid   string `json:"dstuid"` //目标uid
+	Uid      string `json:"uid"`  //用户id
+	Cid      string `json:"cid"`  //公司id
+	Action   string `json:"type"` //行为类型
+	Option   string `json:"opt"`  //视频操作类型
+	Url      string `json:"url"`  //用户使用的URL
 	usernode *zkhelper.ZKNode
 }
 
@@ -99,12 +98,11 @@ func (u *srs_eChatUser) store() error {
 func EchatAddUser(t Task) {
 	var srsuser srs_eChatUser
 	json.Unmarshal([]byte(t.Task_data), &srsuser)
-	log.Infoln("@@@@EchatAddUser:", srsuser)
+	log.Infoln("EchatAddUser:", srsuser)
 	err := srsuser.store()
 	if err != nil {
-		log.Errorln("@@@@EchatAddUser :", srsuser, " err:", err)
+		log.Errorln("EchatAddUser :", srsuser, " err:", err)
 	}
-
 }
 
 func delsrsuser(u *srs_eChatUser) error {
@@ -119,7 +117,7 @@ func delsrsuser(u *srs_eChatUser) error {
 		}
 		mapeChatUser.Delete(user.User.getUidMark(u.Stream))
 	} else {
-		log.Errorln("!!!!!!!!!!!!!!")
+		log.Errorln("User ", u.User.Uid, " do not Exist!")
 	}
 
 	return nil

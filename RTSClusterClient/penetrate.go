@@ -10,7 +10,7 @@ import (
 	"github.com/golang/protobuf/proto"
 
 	"encoding/json"
-	"fmt"
+	//	"fmt"
 
 	//	"io"
 	"strconv"
@@ -53,7 +53,7 @@ func (p SL_ECHAT) SLProtocalStart() {
 
 		msg := &conn_penetrate.ClientMessageIn{}
 		proto.Unmarshal([]byte(msg4), msg)
-		fmt.Println(msg)
+		log.Println(msg)
 		log.Infoln("Received Name:", msg.GetName(), "Msg:", msg.GetMsg())
 
 		//mms := &conn_penetrate.SendMMS{}
@@ -166,7 +166,7 @@ func PenetrateRTSGetChannelResp(uid uint32, url string) []byte {
 	pen.Tartype = conn_penetrate.Penetrate_USER.Enum()
 	pen.Targets = proto.Uint32(uid)
 
-	fmt.Println(pen)
+	log.Println(pen)
 	buffer, _ := proto.Marshal(pen)
 
 	return buffer
@@ -217,7 +217,7 @@ func PenetrateRTSGetTokenResp(uid uint32, date string) []byte {
 	pen.Tartype = conn_penetrate.Penetrate_USER.Enum()
 	pen.Targets = proto.Uint32(uid)
 
-	fmt.Println(pen)
+	log.Println(pen)
 	buffer, _ := proto.Marshal(pen)
 
 	return buffer
@@ -278,7 +278,7 @@ func PenetrateStreamStopResp(uid uint32, cmd string, data string) []byte {
 	pen.Tartype = conn_penetrate.Penetrate_USER.Enum()
 	pen.Targets = proto.Uint32(uid)
 
-	fmt.Println(pen)
+	log.Println(pen)
 	buffer, _ := proto.Marshal(pen)
 
 	return buffer

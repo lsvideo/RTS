@@ -57,17 +57,17 @@ func getSrsUsers(node *zkhelper.ZKNode) {
 	if err != nil {
 		log.Errorln(err)
 	}
-	log.Infoln("node:", node.Path)
+	log.Debugln("node:", node.Path)
 	if len(children) != 0 {
 		for _, name := range children {
-			log.Infoln("child:", name)
+			log.Debugln("child:", name)
 			var childnode zkhelper.ZKNode = *node
 			childnode.SetPath(node.Path + "/" + name)
 			str, err := rtsclient.Get(&childnode)
 			if err != nil {
-				log.Infoln("Get node err:", err)
+				log.Errorln("Get node err:", err)
 			} else {
-				log.Infoln("Get node :", str)
+				log.Debugln("Get node :", str)
 				var task Task
 				task.Task_data = str
 				EchatAddUser(task)
@@ -85,9 +85,9 @@ func getSrsUsers(node *zkhelper.ZKNode) {
 func eChatDataInit() {
 	//read data under eChatChannelNode
 	getSrsUsers(&eChatChannelNode)
-	log.Infoln("All Channel :")
+	log.Debugln("All Channel :")
 	mapeChatChannels.Range(MapGoThrough)
-	log.Infoln("All User :")
+	log.Debugln("All User :")
 	mapeChatUser.Range(MapGoThrough)
 
 }
@@ -95,29 +95,29 @@ func eChatDataInit() {
 func mapeChatChannelCheck(k, v interface{}) bool {
 	uid := k.(string)
 	channel := v.(*eChatChannel)
-	log.Infoln("channel :", uid, " - ", *channel)
+	log.Debugln("channel :", uid, " - ", *channel)
 	value, _ := mapeChatUser.Load(channel.getUidMark(uid, "1"))
 	srsuser := value.(*srs_eChatUser)
 	client_info, err := get_client_info("127.0.0.1:1985", strconv.Itoa(srsuser.Client_id))
 	if client_info == nil || client_info.Code != 0 || err != nil {
-		log.Errorln("client_info :", client_info, " - ", err)
+		log.Debugln("client_info :", client_info, " - ", err)
 		var task Task
 		buf, _ := json.Marshal(srsuser)
 		task.Task_data = string(buf)
 		EchatDeleteUser(task)
 		EchatDeleteChannel(task)
 	} else {
-		log.Errorln("client_info :", client_info, " - ", err)
+		log.Debugln("client_info :", client_info, " - ", err)
 		var next *list.Element
 		for e := channel.lstUsers.Front(); e != nil; e = next {
 			useruid := e.Value.(string)
 			value, _ := mapeChatUser.Load(channel.getUidMark(useruid, "2"))
 			channeluser := value.(*srs_eChatUser)
 			user_client_info, err := get_client_info("127.0.0.1:1985", strconv.Itoa(channeluser.Client_id))
-			log.Errorln("user_client_info :", user_client_info, " - ", err)
-			log.Errorln("channeluser :", channeluser)
+			log.Debugln("user_client_info :", user_client_info, " - ", err)
+			log.Debugln("channeluser :", channeluser)
 			if user_client_info == nil || user_client_info.Code != 0 || err != nil {
-				log.Errorln("44444444user_client_info :", user_client_info, " - ", err)
+				log.Debugln("user_client_info :", user_client_info, " - ", err)
 				var task Task
 				buf, _ := json.Marshal(channeluser)
 				task.Task_data = string(buf)
@@ -165,11 +165,11 @@ func EchatAddChannel(t Task) {
 	var echatchannel eChatChannel
 	var srsuser srs_eChatUser
 	json.Unmarshal([]byte(t.Task_data), &srsuser)
-	log.Infoln("@@@@EchatAddChannel:", srsuser)
+	log.Infoln("EchatAddChannel:", srsuser)
 
 	err := echatchannel.store(srsuser)
 	if err != nil {
-		log.Errorln("@@@@EchatAddChannel :", echatchannel, " err:", err)
+		log.Errorln("EchatAddChannel :", echatchannel, " err:", err)
 	}
 
 	//mapChannels.Range(sc)
@@ -190,7 +190,7 @@ func deleChatChannel(c *eChatChannel) error {
 		}
 		mapeChatChannels.Delete(channel.Uid)
 	} else {
-		log.Errorln("!!!!!!!!!!!!!!")
+		log.Errorln("Channel did not exist: ", c.Uid)
 	}
 
 	return nil
@@ -200,11 +200,11 @@ func EchatDeleteChannel(t Task) {
 	var channel eChatChannel
 	var srsuser srs_eChatUser
 	json.Unmarshal([]byte(t.Task_data), &srsuser)
-	log.Infoln("@@@@@@@@@@@@@@@@@@@@@@@@EchatDeleteChannel:", srsuser)
+	log.Infoln("EchatDeleteChannel:", srsuser)
 	channel.Uid = srsuser.User.Uid
 	err := deleChatChannel(&channel)
 	if err != nil {
-		log.Errorln("@@@@@@@@@@@@@@@@@@@@@@EchatDeleteChannel :", channel, " err:", err)
+		log.Errorln("EchatDeleteChannel :", channel, " err:", err)
 	}
 
 }
@@ -226,13 +226,12 @@ func EchatAddUserToChannel(t Task) {
 	var srsuser srs_eChatUser
 	var echatuser *eChatUser
 	json.Unmarshal([]byte(t.Task_data), &srsuser)
-	log.Infoln("@@@@EchatAddUserToChannel:", srsuser, "to", t.User_id)
+	log.Infoln("EchatAddUserToChannel:", srsuser, "to", t.User_id)
 	channel.Uid = srsuser.Stream
 	echatuser = srsuser.User
 	value, ok := mapeChatChannels.Load(channel.Uid)
 	if ok {
 		echatchannel := value.(*eChatChannel)
-		log.Infoln("11111111111111:", *echatchannel)
 		if !echatUserInChannel(echatchannel, echatuser.Uid) {
 			echatchannel.lstUsers.PushBack(echatuser.Uid)
 			node := *echatchannel.channelnode
@@ -241,7 +240,6 @@ func EchatAddUserToChannel(t Task) {
 			rtsclient.Create(&node)
 			mapeChatChannels.Store(channel.Uid, echatchannel)
 		}
-		log.Infoln("22222222222222:", *echatchannel)
 		mapeChatChannels.Range(MapGoThrough)
 	}
 }
@@ -262,15 +260,37 @@ func delUserfromeChatChannel(channel *eChatChannel, uid string) {
 			node := *channel.channelnode
 			node.SetPath(node.Path + "/" + user)
 			rtsclient.Delete(&node)
-			var task Task
+			/*var task Task
 			var echatchannel eChatChannel
 			echatchannel.Uid = channel.Uid
 			task.User_id = user
 			task.Task_command = "video.StreamStop"
 			buf, _ := json.Marshal(echatchannel)
 			task.Task_data = string(buf)
-			AddTask(task)
+			AddTask(task)*/
 		}
+	}
+	if "all" == uid {
+		mapeChatUser.Range(MapGoThrough)
+		delChannelUsr := func(k, v interface{}) bool {
+			//这个函数的入参、出参的类型都已经固定，不能修改
+			//可以在函数体内编写自己的代码，调用map中的k,v
+			srs_user := v.(*srs_eChatUser)
+			key := k.(string)
+			log.Debugln("~~~~~~~~~~~~ ", key, " : ", *srs_user)
+			if srs_user.Stream == channel.Uid {
+				var task Task
+				var echatchannel eChatChannel
+				echatchannel.Uid = channel.Uid
+				task.User_id = srs_user.User.Uid
+				task.Task_command = "video.StreamStop"
+				buf, _ := json.Marshal(echatchannel)
+				task.Task_data = string(buf)
+				AddTask(task)
+			}
+			return true
+		}
+		mapeChatUser.Range(delChannelUsr)
 	}
 }
 
@@ -278,7 +298,7 @@ func EchatDeleteUserFromChannel(t Task) {
 	var channel eChatChannel
 	var srsuser srs_eChatUser
 	json.Unmarshal([]byte(t.Task_data), &srsuser)
-	log.Infoln("@@@@EchatDeleteUserFromChannel:", srsuser)
+	log.Infoln("EchatDeleteUserFromChannel:", srsuser)
 	channel.Uid = srsuser.Stream
 	value, ok := mapeChatChannels.Load(channel.Uid)
 	uid := srsuser.User.Uid

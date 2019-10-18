@@ -57,7 +57,7 @@ type Task_response struct {
 }
 
 func (task Task) Do() error {
-	log.Warningln("Do the job!!!!!!!!!!!!!!", task.User_id, task)
+	log.Warningln("Task start!", task.User_id, task)
 	var resp Task_response
 	resp.User_id = task.User_id
 	resp.Task_command = task.Task_command
