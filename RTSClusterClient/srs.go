@@ -11,6 +11,7 @@ import (
 )
 
 var Conns uint32
+var SRS_CALLBACK_DEFAULT_PORT = 10002
 
 type summaries struct {
 	Code int          `json:"code"` // 名称
@@ -83,7 +84,7 @@ var (
 func get_summaries(url string) (sum *summaries, err error) {
 	resp, err := http.Get("http://" + url + "/api/v1/summaries")
 	if err != nil {
-		//log.Println(err)
+		log.Errorln(err)
 		return nil, err
 	}
 
@@ -346,36 +347,38 @@ func srs_play(w http.ResponseWriter, r *http.Request) {
 		log.Errorln("Parse rtmp URL err:", err)
 	} else {
 		//channel户存在为前提
+
+		log.Infoln(m)
+		log.Infoln("uid:", m.Get("uid"))
+		log.Infoln("cid:", m.Get("cid"))
+		log.Infoln("type:", m.Get("type"))
+		log.Infoln("opt:", m.Get("opt"))
+
+		var echatuser eChatUser
+		echatuser.Uid = m.Get("uid")
+		echatuser.Cid = m.Get("cid")
+		echatuser.Url = config.IP + ":" + strconv.Itoa(config.Port) //SRSManger和SRS一一对应 config中的IP:PORT 即为SRS地址
+		//echatuser.Action = m.Get("type")
+		//echatuser.Option = m.Get("opt")
+
+		echatuser.Action = "200"
+		echatuser.Option = "2"
+		//AddTask()
+
+		var srsuser srs_eChatUser
+		srsuser.Client_id = srsData.Client_id
+		srsuser.Stream = srsData.Stream
+		srsuser.User = &echatuser
+
+		var task Task
+		task.Task_command = "eChatAddUser"
+		buf, _ := json.Marshal(srsuser)
+		task.Task_data = string(buf)
+		AddTask(task)
+
+		//流已推送
 		_, ok := mapeChatChannels.Load(srsData.Stream)
 		if ok {
-			log.Infoln(m)
-			log.Infoln("uid:", m.Get("uid"))
-			log.Infoln("cid:", m.Get("cid"))
-			log.Infoln("type:", m.Get("type"))
-			log.Infoln("opt:", m.Get("opt"))
-
-			var echatuser eChatUser
-			echatuser.Uid = m.Get("uid")
-			echatuser.Cid = m.Get("cid")
-			echatuser.Url = config.IP + ":" + strconv.Itoa(config.Port) //SRSManger和SRS一一对应 config中的IP:PORT 即为SRS地址
-			echatuser.Action = m.Get("type")
-			echatuser.Option = m.Get("opt")
-			//AddTask()
-
-			//流已推送
-
-			var srsuser srs_eChatUser
-			srsuser.Client_id = srsData.Client_id
-			srsuser.Stream = srsData.Stream
-			srsuser.User = &echatuser
-
-			var task Task
-			//拉流不记录
-			task.Task_command = "eChatAddUser"
-			buf, _ := json.Marshal(srsuser)
-			task.Task_data = string(buf)
-			AddTask(task)
-
 			//var echatchannel eChatChannel
 			//echatchannel.Uid = srsData.Stream
 			//task.User_id = srsData.Stream
@@ -436,6 +439,8 @@ func srs_stop(w http.ResponseWriter, r *http.Request) {
 			echatuser.Url = u.Host
 			echatuser.Action = m.Get("type")
 			echatuser.Option = m.Get("opt")
+			//echatuser.Action = "200"
+			//echatuser.Option = "2"
 
 			var srsuser srs_eChatUser
 			srsuser.Client_id = srsData.Client_id
@@ -532,7 +537,12 @@ func srsmanager() {
 	http.HandleFunc("/srs_play", srs_play)
 	http.HandleFunc("/srs_stop", srs_stop)
 	http.HandleFunc("/srs_dvr", srs_dvr)
-	if err := http.ListenAndServe("127.0.0.1:10002", nil); err != nil {
+	//if err := http.ListenAndServe("127.0.0.1:"+strconv.Itoa(config.Srs_callback_port), nil); err != nil {
+	var nSrsCallbackPort int = SRS_CALLBACK_DEFAULT_PORT
+	if config.Srs_callback_port != 0 {
+		nSrsCallbackPort = config.Srs_callback_port
+	}
+	if err := http.ListenAndServe("127.0.0.1:"+strconv.Itoa(nSrsCallbackPort), nil); err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
 }
