@@ -40,7 +40,9 @@ func (t *Token) GetToken(uid string) bool {
 
 func (t *Token) Verify(vt string, ip string) error {
 
-	if t.Token == vt && t.IP == ip {
+	//if t.Token == vt && t.IP == ip {
+	if t.Token == vt && vt != "" {
+		//if t.Token == vt {
 		return nil
 	}
 	return errors.New("Token error.")
