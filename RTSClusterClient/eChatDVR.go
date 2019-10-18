@@ -16,6 +16,7 @@ type eChatDvr struct {
 	Start    int64  `json:"start"`
 	Duration int64  `json:"duration"`
 	Size     int64  `json:"size"`
+	Status   string `json:"status"`
 }
 
 var eChatVodNode zkhelper.ZKNode
@@ -31,7 +32,7 @@ func init() {
 
 func (dvrInfo *eChatDvr) store(user *srs_eChatUser) error {
 
-	var companynode zkhelper.ZKNode //cluster manager服务 注册至自动发现节点
+	var companynode zkhelper.ZKNode //注册公司节点
 	companynode.SetServiceType(zkhelper.ServiceTypeRTMP)
 	companynode.SetPath(zkhelper.GetNodePath(zkhelper.GetServicePath(companynode.ServiceType), zkhelper.NodeTypeVod) + "/" + user.User.Cid)
 	companynode.SetName(user.User.Cid)
@@ -46,7 +47,7 @@ func (dvrInfo *eChatDvr) store(user *srs_eChatUser) error {
 		}
 	}
 
-	var usernode zkhelper.ZKNode //cluster manager服务 注册至自动发现节点
+	var usernode zkhelper.ZKNode //注册流节点
 	usernode = companynode
 	usernode.SetPath(usernode.Path + "/" + user.Stream)
 	usernode.SetName(user.Stream)
@@ -62,7 +63,7 @@ func (dvrInfo *eChatDvr) store(user *srs_eChatUser) error {
 	}
 
 	filename := filepath.Base(user.Dvr_File)
-	var typenode zkhelper.ZKNode //cluster manager服务 注册至自动发现节点
+	var typenode zkhelper.ZKNode //视频记录节点
 	typenode = usernode
 	typenode.SetPath(typenode.Path + "/" + filename)
 	typenode.SetName(filename)
@@ -99,12 +100,16 @@ func EchatDvr(t Task) {
 	log.Infoln("filename:", filename)
 	strarr := strings.Split(filename, ".")
 	dvr.Start, _ = strconv.ParseInt(strarr[1], 0, 64)
-	dvr.Url = config.IP + ":" + "8090"
+	//dvr.Url = config.IP + ":" + "8090"
+	//sl.yaml 配置文件中读取
+	dvr.Url = config.IP + ":" + strconv.Itoa(config.Dvr_port)
 	dvr.Size = GetFileSize(srsuser.Dvr_File)
+	//需安装mediainfo程序
 	str, err := Exec_shell("mediainfo --Inform='General;%Duration%' " + srsuser.Dvr_File)
 	dvr.Duration, _ = strconv.ParseInt(str, 0, 64)
+	dvr.Status = "vod"
 	//move file to dvrPath
-	log.Errorln("DVR :", dvr)
+	log.Infoln("DVR :", dvr)
 
 	err = MoveFile(srsuser.Dvr_File, config.Dvr_path+"/"+filename)
 	if err != nil {
@@ -120,20 +125,21 @@ func EchatDvr(t Task) {
 
 func DiskManager() {
 	cronInit()
+	//每隔一小时检测磁盘使用
 	crontask.AddFunc("@hourly", DiskClean)
 	//crontask.AddFunc("*/60 * * * * *", DiskClean)
 }
 
 func DiskClean() {
-	log.Println("DiskClean")
+	log.Infoln("DiskClean")
 	for {
 		if dfpercent := DiskUsage(config.Dvr_path); dfpercent > 0.9 {
-			log.Println("UsagePercent:", dfpercent)
+			log.Infoln("UsagePercent:", dfpercent)
 			var task Task
 			task.Task_command = "eChatDelVodFile"
 			AddTask(task)
 		} else {
-			log.Println("UsagePercent:", dfpercent)
+			log.Infoln("UsagePercent:", dfpercent)
 			break
 		}
 
@@ -145,7 +151,7 @@ func EchatDelVodFile(t Task) {
 	var iOld, iNew int64 = 0, 0
 	dir_list, e := ioutil.ReadDir(config.Dvr_path)
 	if e != nil {
-		log.Println("read dir error")
+		log.Errorln("read dir error!")
 		return
 	}
 	for i, v := range dir_list {
@@ -201,7 +207,7 @@ func EchatDeleteVodNode(filename string) {
 			log.Infoln("child:", name)
 			var childnode zkhelper.ZKNode = eChatVodNode
 			childnode.SetPath(eChatVodNode.Path + "/" + name + "/" + uid)
-			log.Infoln("Chile uid node :", childnode.Path)
+			log.Infoln("Child uid node :", childnode.Path)
 			bExist, _, _ := rtsclient.Exist(&childnode)
 			if bExist {
 				log.Infoln("uid node :", childnode.Path)
