@@ -8,4 +8,7 @@ zk_servers :
 
 penetrate_server : 'tcp://101.132.152.22:11006'
 video_server : 'tcp://*:13005'
+dvr_port : 8090
 dvr_path : '/home/lishuo/work/srs/trunk/objs/nginx/html/vod'
+srs_callback_port : 10002
+srs_api_port : 1985

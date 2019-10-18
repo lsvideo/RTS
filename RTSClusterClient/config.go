@@ -8,15 +8,18 @@ import (
 )
 
 type SL_config struct {
-	IP               string
-	Port             int
-	Type             string
-	Device           string
-	ZK_servers       []string
-	Penetrate_server string
-	Video_server     string
-	Dvr_path         string
-	config_file      string
+	IP                string
+	Port              int
+	Type              string
+	Device            string
+	ZK_servers        []string
+	Penetrate_server  string
+	Video_server      string
+	Dvr_port          int
+	Dvr_path          string
+	config_file       string
+	Srs_callback_port int
+	Srs_api_port      int
 }
 
 type ServerType int32
@@ -48,7 +51,7 @@ func GetServerType(stype string) ServerType {
 
 func Parse_config(sl_cfg *SL_config) error {
 	yamlFile, err := ioutil.ReadFile(sl_cfg.config_file)
-	log.Println("yamlFile:", yamlFile)
+	//log.Println("yamlFile:", yamlFile)
 	if err != nil {
 		log.Printf("yamlFile.Get err #%v \n", err)
 	}
