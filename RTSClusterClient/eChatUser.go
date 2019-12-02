@@ -10,12 +10,15 @@ import (
 var mapeChatUser sync.Map
 
 type eChatUser struct {
-	Uid      string `json:"uid"`  //用户id
-	Cid      string `json:"cid"`  //公司id
-	Action   string `json:"type"` //行为类型
-	Option   string `json:"opt"`  //视频操作类型
-	Url      string `json:"url"`  //用户使用的URL
-	usernode *zkhelper.ZKNode
+	Uid        string `json:"uid"`  //用户id
+	Cid        string `json:"cid"`  //公司id
+	Action     string `json:"type"` //行为类型
+	Option     string `json:"opt"`  //视频操作类型
+	Url        string `json:"url"`  //用户使用的URL
+	Sid        string `json:"sid"`
+	Toid       string `json:"to"`
+	Resolution string `json:"resolution"`
+	usernode   *zkhelper.ZKNode
 }
 
 type srs_eChatUser struct {

@@ -81,6 +81,33 @@ var (
 	SRS_VHOST_VOD = "vod"
 )
 
+func delete_stream(client int) {
+	url := "http://127.0.0.1:1985/api/v1/clients/" + strconv.Itoa(client)
+	req, err := http.NewRequest("DELETE", url, nil)
+	if err != nil {
+		// handle error
+		log.Errorln(err)
+	}
+
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		// handle error
+		log.Errorln(err)
+	}
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Errorln(err)
+	}
+
+	log.Debugln(resp)
+	log.Debugln(string(body))
+
+}
+
 func get_summaries(url string) (sum *summaries, err error) {
 	resp, err := http.Get("http://" + url + "/api/v1/summaries")
 	if err != nil {
@@ -223,6 +250,15 @@ func srs_publish(w http.ResponseWriter, r *http.Request) {
 		log.Infoln("cid:", m.Get("cid"))
 		log.Infoln("type:", m.Get("type"))
 		log.Infoln("opt:", m.Get("opt"))
+		log.Infoln("sid:", m.Get("sid"))
+		log.Infoln("to:", m.Get("to"))
+		log.Infoln("resolution:", m.Get("resolution"))
+
+		value, ok := mapeChatUser.Load(m.Get("uid") + "-" + m.Get("opt") + "-" + srsData.Stream)
+		if ok {
+			srsuser := value.(*srs_eChatUser)
+			delete_stream(srsuser.Client_id)
+		}
 
 		var echatuser eChatUser
 		echatuser.Uid = m.Get("uid")
@@ -230,6 +266,9 @@ func srs_publish(w http.ResponseWriter, r *http.Request) {
 		echatuser.Url = u.Host
 		echatuser.Action = m.Get("type")
 		echatuser.Option = m.Get("opt")
+		echatuser.Sid = m.Get("sid")
+		echatuser.Toid = m.Get("to")
+		echatuser.Resolution = m.Get("resolution")
 
 		var srsuser srs_eChatUser
 		srsuser.Client_id = srsData.Client_id
@@ -248,10 +287,11 @@ func srs_publish(w http.ResponseWriter, r *http.Request) {
 		//buf, _ = json.Marshal(echatchannel)
 		//task.Task_data = string(buf)
 		AddTask(task)
+		task.Task_command = "eChatAddDvrInfo"
+		//buf, _ = json.Marshal(echatchannel)
+		//task.Task_data = string(buf)
+		AddTask(task)
 
-		if srsData.Vhost == SRS_VHOST_VOD {
-
-		}
 	}
 
 	w.WriteHeader(200)
@@ -298,6 +338,9 @@ func srs_unpublish(w http.ResponseWriter, r *http.Request) {
 		echatuser.Url = u.Host
 		echatuser.Action = m.Get("type")
 		echatuser.Option = m.Get("opt")
+		echatuser.Sid = m.Get("sid")
+		echatuser.Toid = m.Get("to")
+		echatuser.Resolution = m.Get("resulotion")
 
 		var srsuser srs_eChatUser
 		srsuser.Client_id = srsData.Client_id
@@ -499,6 +542,9 @@ func srs_dvr(w http.ResponseWriter, r *http.Request) {
 		log.Infoln("cid:", m.Get("cid"))
 		log.Infoln("type:", m.Get("type"))
 		log.Infoln("opt:", m.Get("opt"))
+		log.Infoln("sid:", m.Get("sid"))
+		log.Infoln("to:", m.Get("to"))
+		log.Infoln("resolution:", m.Get("resolution"))
 
 		var echatuser eChatUser
 		echatuser.Uid = m.Get("uid")
@@ -506,6 +552,9 @@ func srs_dvr(w http.ResponseWriter, r *http.Request) {
 		echatuser.Url = config.IP + ":" + strconv.Itoa(config.Port) //SRSManger和SRS一一对应 config中的IP:PORT 即为SRS地址
 		echatuser.Action = m.Get("type")
 		echatuser.Option = m.Get("opt")
+		echatuser.Sid = m.Get("sid")
+		echatuser.Toid = m.Get("to")
+		echatuser.Resolution = m.Get("resolution")
 
 		var srsuser srs_eChatUser
 		srsuser.Client_id = srsData.Client_id
