@@ -20,6 +20,11 @@ type SL_config struct {
 	config_file       string
 	Srs_callback_port int
 	Srs_api_port      int
+	DB_server         string
+	DB_port           int
+	DB_user           string
+	DB_pwd            string
+	DB_name           string
 }
 
 type ServerType int32

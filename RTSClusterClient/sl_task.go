@@ -133,6 +133,9 @@ func (task Task) Do() error {
 	case "eChatDelVodFile":
 		RunCommand("eChatDelVodFile", task)
 		break
+	case "eChatAddDvrInfo":
+		RunCommand("eChatAddDvrInfo", task)
+		break
 	default:
 		fmt.Printf("unknown cmd!!!\n")
 	}

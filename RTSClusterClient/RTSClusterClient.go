@@ -50,6 +50,8 @@ func init() {
 	//Parse_config("./cm.yaml", &config)
 	log.Infoln("get config:", config)
 
+	initMysql(config.DB_server, config.DB_port, config.DB_user, config.DB_pwd, config.DB_name)
+
 }
 
 func exitclean() int {

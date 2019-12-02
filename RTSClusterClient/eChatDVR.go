@@ -8,22 +8,35 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"zkhelper"
 )
 
 type eChatDvr struct {
-	Url      string `json:"url"`
-	Start    int64  `json:"start"`
-	Duration int64  `json:"duration"`
-	Size     int64  `json:"size"`
-	Status   string `json:"status"`
+	Url      string    `json:"url"`
+	Name     string    `json:"name"`
+	Start    int64     `json:"start"`
+	Duration int64     `json:"duration"`
+	Size     int64     `json:"size"`
+	Status   DvrStatus `json:"status"`
 }
 
+type DvrStatus int32
+
+const (
+	DvrStatusVod     DvrStatus = 0
+	DvrStatusdelete  DvrStatus = -1
+	DvrStatusdeleted DvrStatus = -2
+)
+
 var eChatVodNode zkhelper.ZKNode
+var mapeChatDvrInfo sync.Map
 
 func init() {
 	RegisterCommand("eChatDvr", EchatDvr)
-	RegisterCommand("eChatDelVodFile", EchatDelVodFile)
+	RegisterCommand("eChatDelOldestFile", EchatDelOldestFile)
+	RegisterCommand("eChatDelInvalidFile", EchatDelInvalidFile)
+	RegisterCommand("eChatAddDvrInfo", EchatAddDvrInfo)
 	DiskManager()
 	eChatVodNode.ServiceType = zkhelper.GetServiceType(config.Type)
 	eChatVodNode.Name = zkhelper.SHANLI_ZK_FUNC_VOD
@@ -31,6 +44,7 @@ func init() {
 }
 
 func (dvrInfo *eChatDvr) store(user *srs_eChatUser) error {
+	dvrInfo.addDvrtoDB(user)
 
 	var companynode zkhelper.ZKNode //注册公司节点
 	companynode.SetServiceType(zkhelper.ServiceTypeRTMP)
@@ -90,14 +104,26 @@ func (dvrInfo *eChatDvr) store(user *srs_eChatUser) error {
 	return nil
 }
 
+func (dvrInfo *eChatDvr) addDvrtoDB(user *srs_eChatUser) {
+	insertDvrItem(user, dvrInfo)
+}
+
 func EchatDvr(t Task) {
 	var srsuser srs_eChatUser
 	var dvr eChatDvr
 	json.Unmarshal([]byte(t.Task_data), &srsuser)
 	log.Infoln("EchatDvr:", srsuser)
 
+	value, ok := mapeChatDvrInfo.Load(srsuser.Stream)
+	if ok {
+		user := value.(*srs_eChatUser)
+		srsuser.User = user.User
+		log.Infoln("EchatDvr get stream user Info:", srsuser, srsuser.User)
+	}
+
 	filename := filepath.Base(srsuser.Dvr_File)
 	log.Infoln("filename:", filename)
+	dvr.Name = filename
 	strarr := strings.Split(filename, ".")
 	dvr.Start, _ = strconv.ParseInt(strarr[1], 0, 64)
 	//dvr.Url = config.IP + ":" + "8090"
@@ -107,7 +133,7 @@ func EchatDvr(t Task) {
 	//需安装mediainfo程序
 	str, err := Exec_shell("mediainfo --Inform='General;%Duration%' " + srsuser.Dvr_File)
 	dvr.Duration, _ = strconv.ParseInt(str, 0, 64)
-	dvr.Status = "vod"
+	dvr.Status = DvrStatusVod
 	//move file to dvrPath
 	log.Infoln("DVR :", dvr)
 
@@ -121,32 +147,66 @@ func EchatDvr(t Task) {
 		log.Errorln("EchatDvr :", srsuser, " err:", err)
 	}
 
+	mapeChatDvrInfo.Delete(srsuser.Stream)
+
 }
 
 func DiskManager() {
 	cronInit()
 	//每隔一小时检测磁盘使用
-	crontask.AddFunc("@hourly", DiskClean)
-	//crontask.AddFunc("*/60 * * * * *", DiskClean)
+	//crontask.AddFunc("@hourly", DiskClean)
+	crontask.AddFunc("*/10 * * * * *", DiskClean)
 }
 
 func DiskClean() {
 	log.Infoln("DiskClean")
+	//delete the file whose status is delete in tb_video_file
+	var task Task
+	task.Task_command = "eChatDelInvalidFile"
+	EchatDelInvalidFile(task)
+
+	//when the disk usage > 90% , delete the oldest file.
 	for {
 		if dfpercent := DiskUsage(config.Dvr_path); dfpercent > 0.9 {
 			log.Infoln("UsagePercent:", dfpercent)
 			var task Task
-			task.Task_command = "eChatDelVodFile"
-			AddTask(task)
+			task.Task_command = "eChatDelOldestFile"
+			//AddTask(task)
+			EchatDelOldestFile(task)
 		} else {
 			log.Infoln("UsagePercent:", dfpercent)
 			break
 		}
-
 	}
 }
 
-func EchatDelVodFile(t Task) {
+func EchatDelInvalidFile(t Task) {
+	server := config.IP + ":" + strconv.Itoa(config.Dvr_port)
+	mapDvr := make(map[int]string)
+	queryDvrIdNamebyStatus(DvrStatusdelete, server, mapDvr)
+	for key, value := range mapDvr {
+		filename := value
+		id := key
+		err := RemoveFile(config.Dvr_path + "/" + filename)
+		if err != nil {
+			log.Errorln("Delete file: ", config.Dvr_path, "/", filename, " err: ", err)
+		}
+		updateDvrStatus(id, DvrStatusdeleted)
+		EchatDeleteVodNode(filename)
+	}
+}
+
+func EchatUpdateDvrStatusByName(filename string, status DvrStatus) {
+	server := config.IP + ":" + strconv.Itoa(config.Dvr_port)
+	mapDvr := make(map[int]string)
+	queryDvrIdbyName(filename, server, mapDvr)
+	for key, _ := range mapDvr {
+		id := key
+		updateDvrStatus(id, status)
+	}
+}
+
+func EchatDelOldestFile(t Task) {
 	var strOld string = ""
 	var iOld, iNew int64 = 0, 0
 	dir_list, e := ioutil.ReadDir(config.Dvr_path)
@@ -172,10 +232,12 @@ func EchatDelVodFile(t Task) {
 	}
 	log.Println("Oldest file:", strOld)
 	if strOld != "" {
-		EchatDeleteVodNode(strOld)
 		err := RemoveFile(config.Dvr_path + "/" + strOld)
 		if err != nil {
 			log.Errorln("Delete file: ", config.Dvr_path, "/", strOld, " err: ", err)
+		} else {
+			EchatUpdateDvrStatusByName(strOld, DvrStatusdeleted)
+			EchatDeleteVodNode(strOld)
 		}
 	}
 }
@@ -222,4 +284,11 @@ func EchatDeleteVodNode(filename string) {
 			}
 		}
 	}
+}
+
+func EchatAddDvrInfo(t Task) {
+	var srsuser srs_eChatUser
+	json.Unmarshal([]byte(t.Task_data), &srsuser)
+	log.Infoln("EchatAddDvrInfo!!!!!!!!!!!!!!!!!!!!!!!!!:", srsuser)
+	mapeChatDvrInfo.Store(srsuser.Stream, &srsuser)
 }

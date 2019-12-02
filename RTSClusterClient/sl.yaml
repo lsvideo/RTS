@@ -1,9 +1,9 @@
-ip : '192.168.196.145'
+ip : '192.168.2.124'
 port : 1935
 type : 'rtmp'
 device : 'ens33'
 zk_servers :
-    - '192.168.196.145:2181'
+    - '192.168.2.124:2181'
     - '47.101.69.84:3181'
 
 penetrate_server : 'tcp://101.132.152.22:11006'
@@ -12,3 +12,9 @@ dvr_port : 8090
 dvr_path : '/home/lishuo/work/srs/trunk/objs/nginx/html/vod'
 srs_callback_port : 10002
 srs_api_port : 1985
+
+db_server : "119.23.230.80"
+db_port : 3306
+db_user : "root"
+db_pwd  : "shanli123456"
+db_name  : "Poc_star_en"
