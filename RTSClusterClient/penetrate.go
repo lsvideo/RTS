@@ -41,20 +41,20 @@ func (p SL_ECHAT) SLProtocalStart() {
 	// Wait for messages
 	for {
 		msg1, _ := socket.Recv(0)
-		log.Infoln("Received1 ", msg1)
+		log.Debugln("Received1 ", msg1)
 		msg2, _ := socket.Recv(0)
-		log.Infoln("Received2 ", string(msg2))
+		log.Debugln("Received2 ", string(msg2))
 		msg3, _ := socket.Recv(0)
-		log.Infoln("Received3 ", string(msg3))
+		log.Debugln("Received3 ", string(msg3))
 		msg4, _ := socket.Recv(0)
-		log.Infoln("Received msg ", string(msg4))
+		log.Debugln("Received msg ", string(msg4))
 		//msg5, _ := socket.Recv(0)
 		//println("Received5 ", string(msg5))
 
 		msg := &conn_penetrate.ClientMessageIn{}
 		proto.Unmarshal([]byte(msg4), msg)
 		log.Println(msg)
-		log.Infoln("Received Name:", msg.GetName(), "Msg:", msg.GetMsg())
+		log.Debugln("Received Name:", msg.GetName(), "Msg:", msg.GetMsg())
 
 		//mms := &conn_penetrate.SendMMS{}
 		//proto.Unmarshal(msg.GetMsg(), gc)
@@ -73,40 +73,40 @@ func (p SL_ECHAT) SLProtocalStop() {
 
 func echatSendMsg(data string) {
 	socket, err := zmq.NewSocket(zmq.DEALER)
-
-	log.Infoln("socket err:", err)
+	if nil != err {
+		log.Errorln("socket err:", err)
+	}
 	err = socket.Connect(config.Penetrate_server)
 	defer socket.Close()
-	log.Infoln("Connect err:", err)
 	if nil != err {
-		log.Errorln(err)
+		log.Errorln("Connect err:", err)
 	}
 
 	var c int
 	c, err = socket.Send("", zmq.SNDMORE)
-	log.Infoln("Send \" \" count:", c, "err:", err)
+	log.Debugln("Send \" \" count:", c, "err:", err)
 	if nil != err {
 		log.Errorln(err)
 	}
 	c, err = socket.Send("#pb", zmq.SNDMORE)
-	log.Infoln("Send #pb count:", c, "err:", err)
+	log.Debugln("Send #pb count:", c, "err:", err)
 	if nil != err {
 		log.Errorln(err)
 	}
 	c, err = socket.Send("conn.penetrate.Penetrate", zmq.SNDMORE)
-	log.Infoln("Send conn.penetrate.Penetrate count:", c, "err:", err)
+	log.Debugln("Send conn.penetrate.Penetrate count:", c, "err:", err)
 	if nil != err {
 		log.Errorln(err)
 	}
 
-	log.Infoln("Send msg :", data)
+	log.Debugln("Send msg :", data)
 	//fmt.Println("!!!", pen)
 	//	f, _ := os.OpenFile("123", os.O_CREATE|os.O_WRONLY, 0666)
 	//	defer f.Close()
 	//	f.Write(buf)
 	c, err = socket.Send(data, 0)
 
-	log.Infoln("Send msg over count:", c, "err:", err)
+	log.Debugln("Send msg over count:", c, "err:", err)
 	if nil != err {
 		log.Errorln(err)
 	}
@@ -115,9 +115,9 @@ func echatSendMsg(data string) {
 func EchatGetChannelResp(t Task) {
 	uid64, _ := strconv.ParseUint(t.User_id, 0, 32)
 	uid := uint32(uid64)
-	log.Infoln("send Resp to :", uid)
+	log.Debugln("send Resp to :", uid)
 	url := getMinLinksCahnnel()
-	log.Warningln("!!!!!!!!!!!!!url :", url)
+	log.Debugln("!!!!!!!!!!!!!url :", url)
 	buf := PenetrateRTSGetChannelResp(uid, url)
 
 	echatSendMsg(string(buf))
@@ -150,8 +150,8 @@ func PenetrateRTSGetChannelResp(uid uint32, url string) []byte {
 	//bufmsgexternal, _ := proto.Marshal(msgexternal) //序列化
 	jsonStu, _ := json.Marshal(msgexternal)
 
-	log.Printf("byte: %v \n", jsonStu)
-	log.Printf("String: %s\n", string(jsonStu))
+	log.Debugf("byte: %v \n", jsonStu)
+	log.Debugf("String: %s\n", string(jsonStu))
 	//构造ExternalServMsg
 
 	//external.Msg = proto.String(string(bufmsgexternal))
@@ -166,7 +166,7 @@ func PenetrateRTSGetChannelResp(uid uint32, url string) []byte {
 	pen.Tartype = conn_penetrate.Penetrate_USER.Enum()
 	pen.Targets = proto.Uint32(uid)
 
-	log.Println(pen)
+	log.Debugln(pen)
 	buffer, _ := proto.Marshal(pen)
 
 	return buffer
@@ -201,8 +201,8 @@ func PenetrateRTSGetTokenResp(uid uint32, date string) []byte {
 	//bufmsgexternal, _ := proto.Marshal(msgexternal) //序列化
 	jsonStu, _ := json.Marshal(msgexternal)
 
-	log.Printf("byte: %v \n", jsonStu)
-	log.Printf("String: %s\n", string(jsonStu))
+	log.Debugf("byte: %v \n", jsonStu)
+	log.Debugf("String: %s\n", string(jsonStu))
 	//构造ExternalServMsg
 
 	//external.Msg = proto.String(string(bufmsgexternal))
@@ -217,7 +217,7 @@ func PenetrateRTSGetTokenResp(uid uint32, date string) []byte {
 	pen.Tartype = conn_penetrate.Penetrate_USER.Enum()
 	pen.Targets = proto.Uint32(uid)
 
-	log.Println(pen)
+	log.Debugln(pen)
 	buffer, _ := proto.Marshal(pen)
 
 	return buffer
@@ -226,7 +226,7 @@ func PenetrateRTSGetTokenResp(uid uint32, date string) []byte {
 func EchatGetToken(t Task) {
 	gt := &video.GetToken{}
 	json.Unmarshal([]byte(t.Task_data), gt)
-	log.Println("####video.GetTokenResp:", t)
+	log.Debugln("####video.GetTokenResp:", t)
 	var task Task
 	task.Task_command = "video.GetTokenResp"
 	task.User_id = gt.GetUid()
@@ -237,7 +237,7 @@ func EchatGetToken(t Task) {
 func EchatGetTokenResp(t Task) {
 	uid64, _ := strconv.ParseUint(t.User_id, 0, 32)
 	uid := uint32(uid64)
-	log.Infoln("send Resp to :", uid)
+	log.Debugln("send Resp to :", uid)
 
 	buf := PenetrateRTSGetTokenResp(uid, t.Task_data)
 
@@ -258,12 +258,13 @@ func PenetrateStreamStopResp(uid uint32, cmd string, data string) []byte {
 
 	//构造填充在ExternalServMsg中的UserMessage
 	msgexternal.RtcType = proto.String(cmd)
+	msgexternal.ServiceType = proto.String("rtcServiceType")
 	msgexternal.RtcArrayData = append(msgexternal.RtcArrayData, chn)
 	//bufmsgexternal, _ := proto.Marshal(msgexternal) //序列化
 	jsonStu, _ := json.Marshal(msgexternal)
 
-	log.Printf("byte: %v \n", jsonStu)
-	log.Printf("String: %s\n", string(jsonStu))
+	log.Debugf("byte: %v \n", jsonStu)
+	log.Debugf("String: %s\n", string(jsonStu))
 	//构造ExternalServMsg
 
 	//external.Msg = proto.String(string(bufmsgexternal))
@@ -278,7 +279,7 @@ func PenetrateStreamStopResp(uid uint32, cmd string, data string) []byte {
 	pen.Tartype = conn_penetrate.Penetrate_USER.Enum()
 	pen.Targets = proto.Uint32(uid)
 
-	log.Println(pen)
+	log.Debugln(pen)
 	buffer, _ := proto.Marshal(pen)
 
 	return buffer
@@ -287,7 +288,7 @@ func PenetrateStreamStopResp(uid uint32, cmd string, data string) []byte {
 func EchatStreamStop(t Task) {
 	uid64, _ := strconv.ParseUint(t.User_id, 0, 32)
 	uid := uint32(uid64)
-	log.Infoln("send Resp to :", uid)
+	log.Debugln("send Resp to :", uid)
 
 	buf := PenetrateStreamStopResp(uid, t.Task_command, t.Task_data)
 

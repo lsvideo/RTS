@@ -7,8 +7,9 @@ message Item {
 
 // 用于封装不同的需要发送到客户端的消息
 message RTCMessage {
-	optional string	rtcType  	= 1;	// 消息全名
-	repeated Item	rtcArrayData		= 2;	// json 消息
+	optional string	rtcType  	    = 1;	// 消息全名
+	optional string	serviceType  	= 2;	// 服务类型 - 固定值rtcServiceType
+	repeated Item	rtcArrayData	= 3;	// json 消息
 }
 
 //终端获取本终端使用的视频通道时透传到RTS服务的消息
