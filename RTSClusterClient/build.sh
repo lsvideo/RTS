@@ -1,6 +1,6 @@
 
 #当前版本号,每次更新服务时都必须更新版本号
-CurrentVersion=0.0.1
+CurrentVersion=0.1.0
 #项目名
 Project=RTSClusterClient
 
