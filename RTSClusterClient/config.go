@@ -27,6 +27,12 @@ type SL_config struct {
 	DB_name           string
 }
 
+var (
+	SRS_CALLBACK_DEFAULT_PORT = 10002
+	SRS_API_DEFAULT_PORT      = 1985
+	SRS_DVR_DEFAULT_PORT      = 8090
+)
+
 type ServerType int32
 
 const (
@@ -54,7 +60,16 @@ func GetServerType(stype string) ServerType {
 	}
 }
 
-func Parse_config(sl_cfg *SL_config) error {
+// init default config
+func (sl_cfg *SL_config) init_config() {
+	sl_cfg.Dvr_port = SRS_DVR_DEFAULT_PORT
+	sl_cfg.Srs_api_port = SRS_API_DEFAULT_PORT
+	sl_cfg.Srs_callback_port = SRS_CALLBACK_DEFAULT_PORT
+}
+
+func (sl_cfg *SL_config) Parse_config(cfg string) error {
+	sl_cfg.config_file = cfg
+	sl_cfg.init_config()
 	yamlFile, err := ioutil.ReadFile(sl_cfg.config_file)
 	//log.Println("yamlFile:", yamlFile)
 	if err != nil {

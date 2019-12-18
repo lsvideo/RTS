@@ -98,7 +98,7 @@ func mapeChatChannelCheck(k, v interface{}) bool {
 	log.Debugln("channel :", uid, " - ", *channel)
 	value, _ := mapeChatUser.Load(channel.getUidMark(uid, "1"))
 	srsuser := value.(*srs_eChatUser)
-	client_info, err := get_client_info("127.0.0.1:1985", strconv.Itoa(srsuser.Client_id))
+	client_info, err := get_client_info("127.0.0.1:" + strconv.Itoa(config.Srs_api_port), strconv.Itoa(srsuser.Client_id))
 	if client_info == nil || client_info.Code != 0 || err != nil {
 		log.Debugln("client_info :", client_info, " - ", err)
 		var task Task
@@ -113,7 +113,7 @@ func mapeChatChannelCheck(k, v interface{}) bool {
 			useruid := e.Value.(string)
 			value, _ := mapeChatUser.Load(channel.getUidMark(useruid, "2"))
 			channeluser := value.(*srs_eChatUser)
-			user_client_info, err := get_client_info("127.0.0.1:1985", strconv.Itoa(channeluser.Client_id))
+			user_client_info, err := get_client_info("127.0.0.1:" + strconv.Itoa(config.Srs_api_port), strconv.Itoa(channeluser.Client_id))
 			log.Debugln("user_client_info :", user_client_info, " - ", err)
 			log.Debugln("channeluser :", channeluser)
 			if user_client_info == nil || user_client_info.Code != 0 || err != nil {

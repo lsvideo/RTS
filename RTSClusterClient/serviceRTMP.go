@@ -24,7 +24,7 @@ type ServiceRTMP struct {
 var rtmp ServiceRTMP
 
 func init() {
-	fmt.Println("init rtmp")
+	log.Println("init rtmp")
 	mapService[ServerTypeRTMP] = rtmp
 }
 
@@ -57,7 +57,7 @@ func (rtmp ServiceRTMP) SLServiceStart() {
 		cpu := CpuUsedPersent()
 		//wb, rb := BandwidthUsed(GetInterfaceNameFromIp(config.IP))
 		wb, rb := BandwidthUsed(config.Device)
-		sum, _ := get_summaries("127.0.0.1:1985")
+		sum, _ := get_summaries("127.0.0.1:" + strconv.Itoa(config.Srs_api_port))
 		if sum != nil {
 			if sysstate.Links == 0 {
 				log.Errorln("srs start!")
@@ -70,7 +70,7 @@ func (rtmp ServiceRTMP) SLServiceStart() {
 		wb -= wblast
 		rb -= rblast
 		if wblast != 0 && rblast != 0 {
-			os.Stdout.WriteString(fmt.Sprintf("\rCPU: %.2f    MEM:  %.2f   Links:%d   Down:%d kb/s    Up:%d kb/s    ", cpu, mem, sysstate.Links, rb/1024/(uint64(REPORT_INTERVAL)), wb/1024/(uint64(REPORT_INTERVAL))))
+			os.Stdout.WriteString(fmt.Sprintf("\rCPU: %.2f    MEM:  %.2f   Links:%d   Down:%d KB/s    Up:%d KB/s    ", cpu, mem, sysstate.Links, rb/1024/(uint64(REPORT_INTERVAL)), wb/1024/(uint64(REPORT_INTERVAL))))
 			sysstate.Cpu = cpu
 			sysstate.Mem = mem
 			sysstate.NetRX = rb

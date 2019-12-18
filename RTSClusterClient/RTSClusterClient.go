@@ -43,12 +43,10 @@ func init() {
 		os.Exit(0)
 	}
 
-	config.config_file = cfgFile
-	sl_log.SetLogLevel("info")
+	sl_log.SetLogLevel("debug")
 	sl_log.SetLogPath("./" + GetAppName() + ".log")
-	Parse_config(&config)
-	//Parse_config("./cm.yaml", &config)
-	log.Infoln("get config:", config)
+	config.Parse_config(cfgFile)
+	log.Debugln("get config:", config)
 
 	initMysql(config.DB_server, config.DB_port, config.DB_user, config.DB_pwd, config.DB_name)
 

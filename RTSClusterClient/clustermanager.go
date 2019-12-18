@@ -156,7 +156,7 @@ func (cm ServiceClusterManager) SLServiceStart() {
 				server.SetName(ip_port)
 				server.SetServerType(ServerTypeRTMP)
 				server.SetIP(ip_port[:strings.Index(ip_port, ":")])
-				server.SetPort("1985")
+				server.SetPort(strconv.Itoa(config.Srs_api_port))
 				server.NodeInit(path)
 				server.lstChannels = list.New()
 				mapServers.Store(ip_port, server)
