@@ -154,8 +154,8 @@ func EchatDvr(t Task) {
 func DiskManager() {
 	cronInit()
 	//每隔一小时检测磁盘使用
-	//crontask.AddFunc("@hourly", DiskClean)
-	crontask.AddFunc("*/10 * * * * *", DiskClean)
+	crontask.AddFunc("@hourly", DiskClean)
+	//crontask.AddFunc("*/10 * * * * *", DiskClean)
 }
 
 func DiskClean() {
@@ -289,6 +289,6 @@ func EchatDeleteVodNode(filename string) {
 func EchatAddDvrInfo(t Task) {
 	var srsuser srs_eChatUser
 	json.Unmarshal([]byte(t.Task_data), &srsuser)
-	log.Infoln("EchatAddDvrInfo!!!!!!!!!!!!!!!!!!!!!!!!!:", srsuser)
+	log.Infoln("EchatAddDvrInfo:", srsuser)
 	mapeChatDvrInfo.Store(srsuser.Stream, &srsuser)
 }
