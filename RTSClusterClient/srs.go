@@ -11,7 +11,6 @@ import (
 )
 
 var Conns uint32
-var SRS_CALLBACK_DEFAULT_PORT = 10002
 
 type summaries struct {
 	Code int          `json:"code"` // 名称
@@ -82,7 +81,7 @@ var (
 )
 
 func delete_stream(client int) {
-	url := "http://127.0.0.1:1985/api/v1/clients/" + strconv.Itoa(client)
+	url := "http://127.0.0.1:" + strconv.Itoa(config.Srs_api_port) + "/api/v1/clients/" + strconv.Itoa(client)
 	req, err := http.NewRequest("DELETE", url, nil)
 	if err != nil {
 		// handle error
@@ -254,11 +253,15 @@ func srs_publish(w http.ResponseWriter, r *http.Request) {
 		log.Infoln("to:", m.Get("to"))
 		log.Infoln("resolution:", m.Get("resolution"))
 
-		value, ok := mapeChatUser.Load(m.Get("uid") + "-" + m.Get("opt") + "-" + srsData.Stream)
-		if ok {
-			srsuser := value.(*srs_eChatUser)
-			delete_stream(srsuser.Client_id)
-		}
+		//value, ok := mapeChatUser.Load(m.Get("uid") + "-" + m.Get("opt") + "-" + srsData.Stream)
+		//if ok {
+		//	srsuser := value.(*srs_eChatUser)
+		//	log.Warningln("###########clients: old:", srsuser.Client_id, " new:", srsData.Client_id)
+		//	if srsuser.Client_id != srsData.Client_id {
+		//		delete_stream(srsuser.Client_id)
+		//		res = false
+		//	}
+		//}
 
 		var echatuser eChatUser
 		echatuser.Uid = m.Get("uid")
@@ -401,10 +404,10 @@ func srs_play(w http.ResponseWriter, r *http.Request) {
 		echatuser.Uid = m.Get("uid")
 		echatuser.Cid = m.Get("cid")
 		echatuser.Url = config.IP + ":" + strconv.Itoa(config.Port) //SRSManger和SRS一一对应 config中的IP:PORT 即为SRS地址
-		//echatuser.Action = m.Get("type")
+		echatuser.Action = m.Get("type")
 		//echatuser.Option = m.Get("opt")
 
-		echatuser.Action = "200"
+		//echatuser.Action = "200"
 		echatuser.Option = "2"
 		//AddTask()
 
@@ -560,7 +563,12 @@ func srs_dvr(w http.ResponseWriter, r *http.Request) {
 		srsuser.Client_id = srsData.Client_id
 		srsuser.Stream = srsData.Stream
 		srsuser.User = &echatuser
-		srsuser.Dvr_File = srsData.Dvr_Path + srsData.Dvr_File[strings.Index(srsData.Dvr_File, "/"):]
+		if strings.Index(srsData.Dvr_File, "/") == 0 {
+			srsuser.Dvr_File = srsData.Dvr_File
+		} else {
+			srsuser.Dvr_File = srsData.Dvr_Path + srsData.Dvr_File[strings.Index(srsData.Dvr_File, "/"):]
+		}
+
 		log.Infoln("DVR srsuser:", srsuser)
 		var task Task
 		task.Task_command = "eChatDvr"
@@ -579,6 +587,7 @@ func srs_dvr(w http.ResponseWriter, r *http.Request) {
 
 func srsmanager() {
 	defer PanicRecover()()
+	//handle the http address like "rtmp://47.101.69.84:1935/live?token=tokentemplate&uid=1048&cid=1&type=200&opt=1&sid=reqwreqwrewqrewq&to=1049&resolution=360&vhost=vod/1048"
 	http.HandleFunc("/srs_connect", srs_connect)
 	http.HandleFunc("/srs_close", srs_close)
 	http.HandleFunc("/srs_publish", srs_publish)
